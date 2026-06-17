@@ -127,6 +127,15 @@ export interface CrawlResult {
   responseTime: number;
 }
 
+export interface RetryLogEntry {
+  url: string;
+  attempt: number;
+  httpStatus: number;
+  error: string;
+  timestamp: number;
+  recoverable: boolean;
+}
+
 export interface CrawlerOptions {
   maxConcurrency?: number;
   maxDepth?: number;
@@ -140,6 +149,13 @@ export interface CrawlerOptions {
   urlFilter?: (url: string) => boolean;
 }
 
+export interface PageRule {
+  pattern: string | RegExp;
+  extract: ExtractionSchema;
+  followLinks?: boolean;
+  linkSelector?: string;
+}
+
 export interface CrawlConfig {
   name: string;
   seedUrls: string[];
@@ -147,6 +163,8 @@ export interface CrawlConfig {
   linkSelector?: string;
   urlFilter?: (url: string) => boolean;
   extract?: ExtractionSchema;
+  pageRules?: PageRule[];
+  mergeBy?: string;
   actions?: Action[];
   maxDepth?: number;
   maxConcurrency?: number;
@@ -159,22 +177,50 @@ export interface CrawlConfig {
   respectRobotsTxt?: boolean;
 }
 
+export interface CrawlPageResult {
+  url: string;
+  status: number;
+  pageType: string;
+  extracted?: ExtractionResult;
+  retryCount: number;
+}
+
+export interface CrawlErrorEntry {
+  url: string;
+  error: string;
+  httpStatus: number;
+  recoverable: boolean;
+  retryCount: number;
+}
+
 export interface CrawlConfigResult {
   configName: string;
+  seedUrls: string[];
   pagesCrawled: number;
   pagesFailed: number;
   startTime: number;
   endTime: number;
   durationMs: number;
-  results: Array<{
-    url: string;
-    status: number;
-    extracted?: ExtractionResult;
-  }>;
-  errors: Array<{
-    url: string;
-    error: string;
-  }>;
+  results: CrawlPageResult[];
+  errors: CrawlErrorEntry[];
+  retryLog: RetryLogEntry[];
+  mergedItems?: ExtractionResult[];
+}
+
+export interface CrawlReport {
+  configName: string;
+  seedUrls: string[];
+  summary: {
+    pagesCrawled: number;
+    pagesFailed: number;
+    durationMs: number;
+    startTime: string;
+    endTime: string;
+  };
+  pages: CrawlPageResult[];
+  errors: CrawlErrorEntry[];
+  retryLog: RetryLogEntry[];
+  mergedItems?: ExtractionResult[];
 }
 
 export interface URLOptions {

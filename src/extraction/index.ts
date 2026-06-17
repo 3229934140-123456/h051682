@@ -1,5 +1,5 @@
 import type { DOMNode, ElementNode, ExtractionRule, ExtractionSchema, ExtractionResult } from '../types';
-import { querySelector, querySelectorAll } from '../css-selector';
+import { querySelector, querySelectorAll, matches } from '../css-selector';
 import { textContent, innerHTML, outerHTML } from '../html-parser';
 
 const SELF_SELECTOR = '&self';
@@ -42,7 +42,24 @@ export class DataExtractor {
       }
       return [];
     }
-    return querySelectorAll(context.dom, selector);
+
+    const descendants = querySelectorAll(context.dom, selector);
+
+    if (
+      context.dom.nodeType === 1 &&
+      descendants.length === 0 &&
+      !selector.includes(' ') &&
+      !selector.includes('>') &&
+      !selector.includes('+') &&
+      !selector.includes('~')
+    ) {
+      const el = context.dom as ElementNode;
+      if (matches(el, selector)) {
+        return [el];
+      }
+    }
+
+    return descendants;
   }
 
   private extractSchema(

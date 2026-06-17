@@ -6,6 +6,7 @@ export interface FetchResult {
   html: string;
   headers: Record<string, string>;
   responseTime: number;
+  attempts: number;
   error?: string;
 }
 
@@ -45,14 +46,14 @@ export class Fetcher {
         const result = await this.doFetch(task.url, options);
 
         if (result.success) {
-          return result;
+          return { ...result, attempts: attempt + 1 };
         }
 
         if (this.shouldRetry(result.status, attempt, options.retries)) {
           throw new Error(`HTTP ${result.status}`);
         }
 
-        return result;
+        return { ...result, attempts: attempt + 1 };
       } catch (error) {
         lastError = error as Error;
 
@@ -69,6 +70,7 @@ export class Fetcher {
       html: '',
       headers: {},
       responseTime: 0,
+      attempts: options.retries + 1,
       error: lastError?.message ?? 'Unknown error',
     };
   }
@@ -107,6 +109,7 @@ export class Fetcher {
         html,
         headers,
         responseTime: Date.now() - startTime,
+        attempts: 1,
       };
     } catch (error) {
       return {
@@ -115,6 +118,7 @@ export class Fetcher {
         html: '',
         headers: {},
         responseTime: Date.now() - startTime,
+        attempts: 1,
         error: (error as Error).message,
       };
     }

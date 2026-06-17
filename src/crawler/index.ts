@@ -198,6 +198,8 @@ export class Crawler {
   private async processTask(task: CrawlTask, options: CrawlOptions): Promise<CrawlResult & { extracted?: ExtractionResult }> {
     const fetchResult = await this.fetcher.fetch(task);
 
+    task.retryCount = fetchResult.attempts - 1;
+
     if (!fetchResult.success) {
       throw new Error(fetchResult.error ?? `HTTP ${fetchResult.status}`);
     }
@@ -358,5 +360,5 @@ export function createCrawler(options: CrawlerOptions = {}): Crawler {
   return new Crawler(options);
 }
 
-export { CrawlConfigRunner, runCrawlConfig, createCrawlConfig } from './crawl-config-runner';
+export { CrawlConfigRunner, runCrawlConfig, createCrawlConfig, exportReport } from './crawl-config-runner';
 export { URLDeduplicator, createURLDeduplicator } from './url-deduplicator';

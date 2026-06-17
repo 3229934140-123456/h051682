@@ -1,0 +1,140 @@
+{
+  "configName": "报告导出测试",
+  "seedUrls": [
+    "http://localhost:18923/products/page1",
+    "http://localhost:18923/flaky",
+    "http://localhost:18923/broken"
+  ],
+  "summary": {
+    "pagesCrawled": 9,
+    "pagesFailed": 4,
+    "durationMs": 422,
+    "startTime": "2026-06-17T02:49:13.800Z",
+    "endTime": "2026-06-17T02:49:14.222Z"
+  },
+  "pages": [
+    {
+      "url": "http://localhost:18923/products/page1",
+      "status": 200,
+      "pageType": "/products/page",
+      "extracted": {
+        "title": "商品列表"
+      },
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/products/page2",
+      "status": 200,
+      "pageType": "/products/page",
+      "extracted": {
+        "title": "商品列表 - 第2页"
+      },
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/products/page3",
+      "status": 200,
+      "pageType": "/products/page",
+      "extracted": {
+        "title": "商品列表 - 第3页"
+      },
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/about",
+      "status": 200,
+      "pageType": "default",
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/products/1001",
+      "status": 200,
+      "pageType": "/products/10",
+      "extracted": {
+        "id": "1001",
+        "title": "iPhone 15 Pro"
+      },
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/products/1002",
+      "status": 200,
+      "pageType": "/products/10",
+      "extracted": {
+        "id": "1002",
+        "title": "MacBook Pro 14\""
+      },
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/products/1003",
+      "status": 200,
+      "pageType": "/products/10",
+      "extracted": {
+        "id": "1003",
+        "title": "AirPods Pro"
+      },
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/products/page3.html",
+      "status": 200,
+      "pageType": "/products/page",
+      "extracted": {
+        "title": "商品列表 - 第3页"
+      },
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/flaky",
+      "status": 200,
+      "pageType": "default",
+      "retryCount": 2
+    }
+  ],
+  "errors": [
+    {
+      "url": "http://localhost:18923/broken",
+      "error": "HTTP 404",
+      "httpStatus": 404,
+      "recoverable": false,
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/products/1004",
+      "error": "HTTP 404",
+      "httpStatus": 404,
+      "recoverable": false,
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/products/1005",
+      "error": "HTTP 404",
+      "httpStatus": 404,
+      "recoverable": false,
+      "retryCount": 0
+    },
+    {
+      "url": "http://localhost:18923/products/1006",
+      "error": "HTTP 404",
+      "httpStatus": 404,
+      "recoverable": false,
+      "retryCount": 0
+    }
+  ],
+  "retryLog": [],
+  "mergedItems": [
+    {
+      "id": "1001",
+      "title": "iPhone 15 Pro"
+    },
+    {
+      "id": "1002",
+      "title": "MacBook Pro 14\""
+    },
+    {
+      "id": "1003",
+      "title": "AirPods Pro"
+    }
+  ]
+}
