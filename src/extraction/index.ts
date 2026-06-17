@@ -2,6 +2,8 @@ import type { DOMNode, ElementNode, ExtractionRule, ExtractionSchema, Extraction
 import { querySelector, querySelectorAll } from '../css-selector';
 import { textContent, innerHTML, outerHTML } from '../html-parser';
 
+const SELF_SELECTOR = '&self';
+
 export interface ExtractionContext {
   dom: DOMNode;
   baseUrl: string;
@@ -20,7 +22,7 @@ export class DataExtractor {
     context: ExtractionContext,
     rule: ExtractionRule
   ): unknown {
-    const elements = querySelectorAll(context.dom, rule.selector);
+    const elements = this.resolveElements(context, rule.selector);
 
     if (elements.length === 0) {
       return rule.multiple ? [] : rule.defaultValue;
@@ -31,6 +33,16 @@ export class DataExtractor {
     }
 
     return this.extractSingle(context, elements[0], rule);
+  }
+
+  private resolveElements(context: ExtractionContext, selector: string): ElementNode[] {
+    if (selector === SELF_SELECTOR) {
+      if (context.dom.nodeType === 1) {
+        return [context.dom as ElementNode];
+      }
+      return [];
+    }
+    return querySelectorAll(context.dom, selector);
   }
 
   private extractSchema(
@@ -71,6 +83,9 @@ export class DataExtractor {
     let value: unknown;
 
     switch (rule.extract) {
+      case 'self':
+        value = this.extractSelfProperties(element);
+        break;
       case 'text':
         value = textContent(element).trim();
         break;
@@ -104,7 +119,7 @@ export class DataExtractor {
         dom: element,
       };
       const nestedResult = this.extractSchema(nestedContext, rule.nested);
-      if (typeof value === 'object' && value !== null) {
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         value = { ...(value as Record<string, unknown>), ...nestedResult };
       } else {
         value = nestedResult;
@@ -112,6 +127,36 @@ export class DataExtractor {
     }
 
     return value;
+  }
+
+  private extractSelfProperties(element: ElementNode): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+
+    result.tagName = element.tagName?.toLowerCase() || '';
+    result.id = element.attributes.id || '';
+
+    const classStr = element.attributes.class || '';
+    result.className = classStr;
+    result.classList = classStr.split(/\s+/).filter(Boolean);
+
+    for (const [key, val] of Object.entries(element.attributes)) {
+      if (key !== 'id' && key !== 'class') {
+        result[key] = val;
+      }
+    }
+
+    const dataAttrs: Record<string, string> = {};
+    for (const [key, val] of Object.entries(element.attributes)) {
+      if (key.startsWith('data-')) {
+        const dataKey = key.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+        dataAttrs[dataKey] = val;
+      }
+    }
+    if (Object.keys(dataAttrs).length > 0) {
+      result.data = dataAttrs;
+    }
+
+    return result;
   }
 
   private getProperty(element: ElementNode, propName: string): unknown {
@@ -240,13 +285,45 @@ export function propRule(
   return createExtractionRule(name, selector, 'prop', { attrName, ...options });
 }
 
+export function selfRule(
+  name: string,
+  selector: string = '&self',
+  options: Partial<ExtractionRule> = {}
+): ExtractionRule {
+  return createExtractionRule(name, selector, 'self', options);
+}
+
+export function selfAttrRule(
+  name: string,
+  attrName: string,
+  options: Partial<ExtractionRule> = {}
+): ExtractionRule {
+  return createExtractionRule(name, '&self', 'attr', { attrName, ...options });
+}
+
+export function selfDataRule(
+  name: string,
+  dataKey: string,
+  options: Partial<ExtractionRule> = {}
+): ExtractionRule {
+  return createExtractionRule(name, '&self', 'data', { dataKey, ...options });
+}
+
+export function selfPropRule(
+  name: string,
+  propName: string,
+  options: Partial<ExtractionRule> = {}
+): ExtractionRule {
+  return createExtractionRule(name, '&self', 'prop', { attrName: propName, ...options });
+}
+
 export function listRule(
   name: string,
   selector: string,
   nested: Record<string, ExtractionRule>,
   options: Partial<ExtractionRule> = {}
 ): ExtractionRule {
-  return createExtractionRule(name, selector, 'text', {
+  return createExtractionRule(name, selector, 'self', {
     multiple: true,
     nested,
     ...options,

@@ -357,3 +357,6 @@ export class Crawler {
 export function createCrawler(options: CrawlerOptions = {}): Crawler {
   return new Crawler(options);
 }
+
+export { CrawlConfigRunner, runCrawlConfig, createCrawlConfig } from './crawl-config-runner';
+export { URLDeduplicator, createURLDeduplicator } from './url-deduplicator';

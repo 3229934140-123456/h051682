@@ -79,7 +79,7 @@ export interface Action {
 export interface ExtractionRule {
   name: string;
   selector: string;
-  extract: 'text' | 'html' | 'attr' | 'prop' | 'data';
+  extract: 'text' | 'html' | 'attr' | 'prop' | 'data' | 'self';
   attrName?: string;
   dataKey?: string;
   multiple?: boolean;
@@ -138,6 +138,43 @@ export interface CrawlerOptions {
   respectRobotsTxt?: boolean;
   allowedDomains?: string[];
   urlFilter?: (url: string) => boolean;
+}
+
+export interface CrawlConfig {
+  name: string;
+  seedUrls: string[];
+  followLinks?: boolean;
+  linkSelector?: string;
+  urlFilter?: (url: string) => boolean;
+  extract?: ExtractionSchema;
+  actions?: Action[];
+  maxDepth?: number;
+  maxConcurrency?: number;
+  rateLimit?: number;
+  requestTimeout?: number;
+  maxRetries?: number;
+  retryDelay?: number;
+  userAgent?: string;
+  allowedDomains?: string[];
+  respectRobotsTxt?: boolean;
+}
+
+export interface CrawlConfigResult {
+  configName: string;
+  pagesCrawled: number;
+  pagesFailed: number;
+  startTime: number;
+  endTime: number;
+  durationMs: number;
+  results: Array<{
+    url: string;
+    status: number;
+    extracted?: ExtractionResult;
+  }>;
+  errors: Array<{
+    url: string;
+    error: string;
+  }>;
 }
 
 export interface URLOptions {

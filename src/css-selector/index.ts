@@ -6,6 +6,8 @@ import type {
   CSSCombinator,
 } from '../types';
 
+const SELF_SELECTOR = '&self';
+
 export class SelectorParser {
   private pos: number = 0;
   private input: string = '';
@@ -15,65 +17,79 @@ export class SelectorParser {
     this.input = selector.trim();
 
     const parts: CSSSelectorPart[] = [];
-    let currentPart = this.createEmptyPart();
 
     while (this.pos < this.input.length) {
-      const char = this.input[this.pos];
+      this.skipWhitespace();
 
-      if (char === ' ' || char === '>' || char === '+' || char === '~') {
-        if (this.hasPartContent(currentPart)) {
-          parts.push(currentPart);
-        }
+      if (this.pos >= this.input.length) break;
 
-        const combinator = char as CSSCombinator;
-        if (combinator !== ' ') {
-          this.pos++;
-        } else {
-          while (this.pos < this.input.length && this.input[this.pos] === ' ') {
-            this.pos++;
-          }
-        }
+      let combinator: CSSCombinator | undefined;
+      if (parts.length > 0) {
+        combinator = ' ';
+        const saved = this.pos;
+        const nextChar = this.input[this.pos];
 
-        currentPart = this.createEmptyPart();
-        currentPart.combinator = combinator;
-      } else if (char === '*') {
-        currentPart.tagName = '*';
-        this.pos++;
-      } else if (char === '#') {
-        this.pos++;
-        currentPart.id = this.readIdentifier();
-      } else if (char === '.') {
-        this.pos++;
-        currentPart.classNames.push(this.readIdentifier());
-      } else if (char === '[') {
-        currentPart.attributes.push(this.readAttribute());
-      } else if (char === ':') {
-        if (this.input[this.pos + 1] === ':') {
-          this.pos += 2;
-          currentPart.pseudoClasses.push({ name: `::${this.readIdentifier()}` });
-        } else {
+        if (nextChar === '>' || nextChar === '+' || nextChar === '~') {
+          combinator = nextChar as CSSCombinator;
           this.pos++;
-          currentPart.pseudoClasses.push(this.readPseudoClass());
-        }
-      } else if (char === ',') {
-        break;
-      } else {
-        if (/[a-zA-Z]/.test(char)) {
-          currentPart.tagName = this.readTagName();
-        } else {
-          this.pos++;
+          this.skipWhitespace();
         }
       }
-    }
 
-    if (this.hasPartContent(currentPart)) {
-      parts.push(currentPart);
+      const part = this.readCompoundSelector();
+      if (!this.hasPartContent(part)) break;
+
+      part.combinator = combinator;
+      parts.push(part);
     }
 
     return {
       parts,
       specificity: this.calculateSpecificity(parts),
     };
+  }
+
+  private readCompoundSelector(): CSSSelectorPart {
+    const part: CSSSelectorPart = {
+      classNames: [],
+      attributes: [],
+      pseudoClasses: [],
+    };
+
+    while (this.pos < this.input.length) {
+      const char = this.input[this.pos];
+
+      if (char === ' ' || char === '>' || char === '+' || char === '~' || char === ',') {
+        break;
+      }
+
+      if (char === '*') {
+        part.tagName = '*';
+        this.pos++;
+      } else if (char === '#') {
+        this.pos++;
+        part.id = this.readIdentifier();
+      } else if (char === '.') {
+        this.pos++;
+        part.classNames.push(this.readIdentifier());
+      } else if (char === '[') {
+        part.attributes.push(this.readAttribute());
+      } else if (char === ':') {
+        if (this.input[this.pos + 1] === ':') {
+          this.pos += 2;
+          part.pseudoClasses.push({ name: `::${this.readIdentifier()}` });
+        } else {
+          this.pos++;
+          part.pseudoClasses.push(this.readPseudoClass());
+        }
+      } else if (/[a-zA-Z]/.test(char)) {
+        part.tagName = this.readTagName();
+      } else {
+        this.pos++;
+      }
+    }
+
+    return part;
   }
 
   private createEmptyPart(): CSSSelectorPart {
@@ -233,6 +249,7 @@ export class SelectorMatcher {
   private parser: SelectorParser = new SelectorParser();
 
   public matches(element: ElementNode, selector: string): boolean {
+    if (selector === SELF_SELECTOR) return true;
     const parsed = this.parser.parse(selector);
     return this.matchSelector(element, parsed);
   }
@@ -243,6 +260,11 @@ export class SelectorMatcher {
   }
 
   public querySelectorAll(root: DOMNode, selector: string): ElementNode[] {
+    if (selector === SELF_SELECTOR) {
+      if (root.nodeType === 1) return [root as ElementNode];
+      return [];
+    }
+
     const selectors = selector.split(',').map(s => s.trim()).filter(Boolean);
     const allResults: Set<ElementNode> = new Set();
 
@@ -276,28 +298,26 @@ export class SelectorMatcher {
 
     if (partIndex === 0) return true;
 
-    const prevPart = parts[partIndex - 1];
     const combinator = currentPart.combinator || ' ';
 
-    return this.matchCombinator(element, prevPart, parts, partIndex - 1, combinator);
+    return this.matchCombinator(element, parts, partIndex - 1, combinator);
   }
 
   private matchCombinator(
     element: ElementNode,
-    targetPart: CSSSelectorPart,
     parts: CSSSelectorPart[],
     targetIndex: number,
     combinator: CSSCombinator
   ): boolean {
     switch (combinator) {
       case ' ':
-        return this.matchDescendant(element, targetPart, parts, targetIndex);
+        return this.matchDescendant(element, parts, targetIndex);
       case '>':
-        return this.matchChild(element, targetPart, parts, targetIndex);
+        return this.matchChild(element, parts, targetIndex);
       case '+':
-        return this.matchAdjacentSibling(element, targetPart, parts, targetIndex);
+        return this.matchAdjacentSibling(element, parts, targetIndex);
       case '~':
-        return this.matchGeneralSibling(element, targetPart, parts, targetIndex);
+        return this.matchGeneralSibling(element, parts, targetIndex);
       default:
         return false;
     }
@@ -305,14 +325,13 @@ export class SelectorMatcher {
 
   private matchDescendant(
     element: ElementNode,
-    targetPart: CSSSelectorPart,
     parts: CSSSelectorPart[],
     targetIndex: number
   ): boolean {
     let parent = element.parent;
     while (parent) {
       if (parent.nodeType === 1) {
-        if (this.matchSimpleSelector(parent as ElementNode, targetPart)) {
+        if (this.matchSimpleSelector(parent as ElementNode, parts[targetIndex])) {
           if (targetIndex === 0 || this.matchSelectorParts(parent as ElementNode, parts, targetIndex)) {
             return true;
           }
@@ -325,14 +344,13 @@ export class SelectorMatcher {
 
   private matchChild(
     element: ElementNode,
-    targetPart: CSSSelectorPart,
     parts: CSSSelectorPart[],
     targetIndex: number
   ): boolean {
     const parent = element.parent;
     if (!parent || parent.nodeType !== 1) return false;
 
-    if (!this.matchSimpleSelector(parent as ElementNode, targetPart)) return false;
+    if (!this.matchSimpleSelector(parent as ElementNode, parts[targetIndex])) return false;
 
     if (targetIndex === 0) return true;
 
@@ -341,49 +359,69 @@ export class SelectorMatcher {
 
   private matchAdjacentSibling(
     element: ElementNode,
-    targetPart: CSSSelectorPart,
     parts: CSSSelectorPart[],
     targetIndex: number
   ): boolean {
-    const sibling = this.getPreviousSibling(element);
-    if (!sibling || sibling.nodeType !== 1) return false;
+    const sibling = this.getPreviousElementSibling(element);
+    if (!sibling) return false;
 
-    if (!this.matchSimpleSelector(sibling as ElementNode, targetPart)) return false;
+    if (!this.matchSimpleSelector(sibling, parts[targetIndex])) return false;
 
     if (targetIndex === 0) return true;
 
-    return this.matchSelectorParts(sibling as ElementNode, parts, targetIndex);
+    return this.matchSelectorParts(sibling, parts, targetIndex);
   }
 
   private matchGeneralSibling(
     element: ElementNode,
-    targetPart: CSSSelectorPart,
     parts: CSSSelectorPart[],
     targetIndex: number
   ): boolean {
-    let sibling = this.getPreviousSibling(element);
+    let sibling = this.getPreviousElementSibling(element);
     while (sibling) {
-      if (sibling.nodeType === 1) {
-        if (this.matchSimpleSelector(sibling as ElementNode, targetPart)) {
-          if (targetIndex === 0 || this.matchSelectorParts(sibling as ElementNode, parts, targetIndex)) {
-            return true;
-          }
+      if (this.matchSimpleSelector(sibling, parts[targetIndex])) {
+        if (targetIndex === 0 || this.matchSelectorParts(sibling, parts, targetIndex)) {
+          return true;
         }
       }
-      sibling = this.getPreviousSibling(sibling);
+      sibling = this.getPreviousElementSibling(sibling);
     }
     return false;
   }
 
-  private getPreviousSibling(node: DOMNode): DOMNode | null {
-    if (!node.parent || node.childIndex === 0) return null;
-    return node.parent.children[node.childIndex - 1];
+  private getPreviousElementSibling(node: DOMNode): ElementNode | null {
+    if (!node.parent) return null;
+    for (let i = node.childIndex - 1; i >= 0; i--) {
+      const sibling = node.parent.children[i];
+      if (sibling.nodeType === 1) return sibling as ElementNode;
+    }
+    return null;
   }
 
-  private getNextSibling(node: DOMNode): DOMNode | null {
+  private getNextElementSibling(node: DOMNode): ElementNode | null {
     if (!node.parent) return null;
-    const nextIndex = node.childIndex + 1;
-    return nextIndex < node.parent.children.length ? node.parent.children[nextIndex] : null;
+    for (let i = node.childIndex + 1; i < node.parent.children.length; i++) {
+      const sibling = node.parent.children[i];
+      if (sibling.nodeType === 1) return sibling as ElementNode;
+    }
+    return null;
+  }
+
+  private getElementChildIndex(element: ElementNode): number {
+    if (!element.parent) return 1;
+    let index = 0;
+    for (let i = 0; i < element.childIndex; i++) {
+      if (element.parent.children[i].nodeType === 1) index++;
+    }
+    return index + 1;
+  }
+
+  private getElementCount(parent: DOMNode): number {
+    let count = 0;
+    for (const child of parent.children) {
+      if (child.nodeType === 1) count++;
+    }
+    return count;
   }
 
   private matchSimpleSelector(element: ElementNode, part: CSSSelectorPart): boolean {
@@ -459,12 +497,12 @@ export class SelectorMatcher {
 
     switch (name) {
       case 'first-child':
-        return this.getPreviousSibling(element) === null;
+        return this.getPreviousElementSibling(element) === null;
       case 'last-child':
-        return this.getNextSibling(element) === null;
+        return this.getNextElementSibling(element) === null;
       case 'only-child':
         return (
-          this.getPreviousSibling(element) === null && this.getNextSibling(element) === null
+          this.getPreviousElementSibling(element) === null && this.getNextElementSibling(element) === null
         );
       case 'nth-child':
         return this.matchNthChild(element, arg || '');
@@ -499,15 +537,15 @@ export class SelectorMatcher {
 
   private matchNthChild(element: ElementNode, formula: string): boolean {
     const { a, b } = this.parseNthFormula(formula);
-    const position = element.childIndex + 1;
+    const position = this.getElementChildIndex(element);
     return this.testNthFormula(position, a, b);
   }
 
   private matchNthLastChild(element: ElementNode, formula: string): boolean {
     if (!element.parent) return false;
     const { a, b } = this.parseNthFormula(formula);
-    const totalSiblings = element.parent.children.filter(c => c.nodeType === 1).length;
-    const position = totalSiblings - element.childIndex;
+    const totalElements = this.getElementCount(element.parent);
+    const position = totalElements - this.getElementChildIndex(element) + 1;
     return this.testNthFormula(position, a, b);
   }
 
@@ -572,12 +610,11 @@ export class SelectorMatcher {
     if (a === 0) {
       return position === b;
     }
+    const diff = position - b;
     if (a > 0) {
-      if (position < b) return false;
-      return (position - b) % a === 0 && (position - b) / a >= 0;
+      return diff >= 0 && diff % a === 0;
     } else {
-      if (position > b) return false;
-      return (b - position) % Math.abs(a) === 0;
+      return diff <= 0 && diff % a === 0;
     }
   }
 
