@@ -1,0 +1,248 @@
+{
+  "seedUrls": [
+    "http://localhost:18923/products/page1",
+    "http://localhost:18923/flaky",
+    "http://localhost:18923/broken"
+  ],
+  "discovered": [
+    {
+      "url": "http://localhost:18923/products/page1",
+      "foundFrom": "(seed)",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/flaky",
+      "foundFrom": "(seed)",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/broken",
+      "foundFrom": "(seed)",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/products/page2",
+      "foundFrom": "http://localhost:18923/products/page1",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/products/page3",
+      "foundFrom": "http://localhost:18923/products/page1",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/about",
+      "foundFrom": "http://localhost:18923/products/page1",
+      "reason": "deny"
+    },
+    {
+      "url": "http://localhost:18923/products/1001",
+      "foundFrom": "http://localhost:18923/products/page1",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/products/1002",
+      "foundFrom": "http://localhost:18923/products/page1",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/products/1003",
+      "foundFrom": "http://localhost:18923/products/page1",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/products/page2",
+      "foundFrom": "http://localhost:18923/products/page1",
+      "reason": "dedup"
+    },
+    {
+      "url": "http://localhost:18923/products/page1",
+      "foundFrom": "http://localhost:18923/products/page2",
+      "reason": "dedup"
+    },
+    {
+      "url": "http://localhost:18923/products/page3",
+      "foundFrom": "http://localhost:18923/products/page2",
+      "reason": "dedup"
+    },
+    {
+      "url": "http://localhost:18923/about",
+      "foundFrom": "http://localhost:18923/products/page2",
+      "reason": "deny"
+    },
+    {
+      "url": "http://localhost:18923/products/1004",
+      "foundFrom": "http://localhost:18923/products/page2",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/products/1005",
+      "foundFrom": "http://localhost:18923/products/page2",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/products/page3.html",
+      "foundFrom": "http://localhost:18923/products/page2",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/products/page1",
+      "foundFrom": "http://localhost:18923/products/page3",
+      "reason": "dedup"
+    },
+    {
+      "url": "http://localhost:18923/products/page2",
+      "foundFrom": "http://localhost:18923/products/page3",
+      "reason": "dedup"
+    },
+    {
+      "url": "http://localhost:18923/products/page1",
+      "foundFrom": "http://localhost:18923/products/page3",
+      "reason": "dedup"
+    },
+    {
+      "url": "http://localhost:18923/about",
+      "foundFrom": "http://localhost:18923/products/page3",
+      "reason": "deny"
+    },
+    {
+      "url": "http://localhost:18923/products/1006",
+      "foundFrom": "http://localhost:18923/products/page3",
+      "reason": "enqueued"
+    },
+    {
+      "url": "http://localhost:18923/products/page1",
+      "foundFrom": "http://localhost:18923/products/page3",
+      "reason": "dedup"
+    }
+  ],
+  "byReason": {
+    "enqueued": [
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "(seed)",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/flaky",
+        "foundFrom": "(seed)",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/broken",
+        "foundFrom": "(seed)",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/page2",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/page3",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/1001",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/1002",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/1003",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/1004",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/1005",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/page3.html",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/1006",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "enqueued"
+      }
+    ],
+    "deny": [
+      {
+        "url": "http://localhost:18923/about",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "deny"
+      },
+      {
+        "url": "http://localhost:18923/about",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "deny"
+      },
+      {
+        "url": "http://localhost:18923/about",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "deny"
+      }
+    ],
+    "dedup": [
+      {
+        "url": "http://localhost:18923/products/page2",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page3",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page2",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "dedup"
+      }
+    ]
+  },
+  "summary": {
+    "total": 22,
+    "enqueued": 12,
+    "dedup": 7,
+    "filter": 0,
+    "domain": 0,
+    "depth": 0,
+    "deny": 3,
+    "nonHttp": 0,
+    "notAllowed": 0
+  }
+}

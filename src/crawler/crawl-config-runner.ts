@@ -11,6 +11,8 @@ import type {
   LinkPipelineView,
   LinkPipelineEntry,
   ExportFormat,
+  CrawlComparisonResult,
+  FieldDiff,
 } from '../types';
 import { Crawler } from './index';
 import * as fs from 'fs';
@@ -59,6 +61,9 @@ export class CrawlConfigRunner {
       const errMsg = error instanceof Error ? error.message : String(error);
       const httpStatus = this.extractHttpStatus(errMsg);
       const recoverable = httpStatus >= 500 || httpStatus === 408 || httpStatus === 429;
+      if (retryAttemptsParam && retryAttemptsParam.length > 0) {
+        retryAttemptsByUrl.set(task.url, retryAttemptsParam);
+      }
       finalStatusByUrl.set(task.url, { status: httpStatus, success: false, error: errMsg });
       errors.push({
         url: task.url,
@@ -361,9 +366,39 @@ export function exportCrawl(result: CrawlConfigResult, filePath: string, format:
     case 'items-csv':
       exportItemsCSV(result, filePath);
       break;
+    case 'items-success':
+      exportItemsSuccess(result, filePath);
+      break;
+    case 'errors':
+      exportErrors(result, filePath);
+      break;
+    case 'pipeline':
+      exportPipeline(result, filePath);
+      break;
     default:
       exportReport(result, filePath);
   }
+}
+
+export function exportItemsSuccess(result: CrawlConfigResult, filePath: string): void {
+  const items = result.mergedItems ?? [];
+  const successItems = items.filter((item) => {
+    const hasName = item.name !== undefined && item.name !== null && item.name !== '';
+    const hasDesc = item.desc !== undefined && item.desc !== null && item.desc !== '';
+    return hasName && hasDesc;
+  });
+  ensureDir(filePath);
+  fs.writeFileSync(filePath, JSON.stringify(successItems, null, 2), 'utf-8');
+}
+
+export function exportErrors(result: CrawlConfigResult, filePath: string): void {
+  ensureDir(filePath);
+  fs.writeFileSync(filePath, JSON.stringify(result.errors, null, 2), 'utf-8');
+}
+
+export function exportPipeline(result: CrawlConfigResult, filePath: string): void {
+  ensureDir(filePath);
+  fs.writeFileSync(filePath, JSON.stringify(result.linkPipeline ?? null, null, 2), 'utf-8');
 }
 
 export function exportItemsCSV(result: CrawlConfigResult, filePath: string): void {
@@ -404,6 +439,139 @@ export function exportItemsCSV(result: CrawlConfigResult, filePath: string): voi
 
   ensureDir(filePath);
   fs.writeFileSync(filePath, '\uFEFF' + csv, 'utf-8');
+}
+
+export function compareCrawlResults(
+  base: CrawlConfigResult,
+  latest: CrawlConfigResult,
+  mergeByKey: string = 'id'
+): CrawlComparisonResult {
+  const baseUrls = new Set(base.results.map((r) => r.url));
+  const newUrls = new Set(latest.results.map((r) => r.url));
+  const baseFailedUrls = new Set(base.errors.map((e) => e.url));
+  const newFailedUrls = new Set(latest.errors.map((e) => e.url));
+
+  const pagesAdded: string[] = [];
+  for (const url of newUrls) {
+    if (!baseUrls.has(url) && !baseFailedUrls.has(url)) {
+      pagesAdded.push(url);
+    }
+  }
+
+  const pagesRemoved: string[] = [];
+  for (const url of baseUrls) {
+    if (!newUrls.has(url) && !newFailedUrls.has(url)) {
+      pagesRemoved.push(url);
+    }
+  }
+
+  const pagesStillFailing: Array<{ url: string; oldError: string; newError: string }> = [];
+  const pagesRecovered: string[] = [];
+  const pagesFailed: Array<{ url: string; oldStatus: number; newError: string }> = [];
+
+  for (const url of baseFailedUrls) {
+    if (newFailedUrls.has(url)) {
+      const oldErr = base.errors.find((e) => e.url === url);
+      const newErr = latest.errors.find((e) => e.url === url);
+      pagesStillFailing.push({
+        url,
+        oldError: oldErr?.error ?? '',
+        newError: newErr?.error ?? '',
+      });
+    } else if (newUrls.has(url)) {
+      pagesRecovered.push(url);
+    }
+  }
+
+  for (const url of newFailedUrls) {
+    if (!baseFailedUrls.has(url)) {
+      const baseResult = base.results.find((r) => r.url === url);
+      const newErr = latest.errors.find((e) => e.url === url);
+      pagesFailed.push({
+        url,
+        oldStatus: baseResult?.status ?? 0,
+        newError: newErr?.error ?? '',
+      });
+    }
+  }
+
+  const itemChanges: Array<{ id: string; url: string; changes: FieldDiff[] }> = [];
+  const baseItems = base.mergedItems ?? [];
+  const newItems = latest.mergedItems ?? [];
+  const baseItemsMap = new Map<string, ExtractionResult>();
+
+  for (const item of baseItems) {
+    const key = item[mergeByKey];
+    if (key !== undefined && key !== null) {
+      baseItemsMap.set(String(key), item);
+    }
+  }
+
+  for (const newItem of newItems) {
+    const key = newItem[mergeByKey];
+    if (key === undefined || key === null) continue;
+    const keyStr = String(key);
+    const baseItem = baseItemsMap.get(keyStr);
+    if (!baseItem) continue;
+
+    const changes: FieldDiff[] = [];
+    const allKeys = new Set([...Object.keys(baseItem), ...Object.keys(newItem)]);
+
+    for (const k of allKeys) {
+      if (k === mergeByKey) continue;
+      const oldVal = baseItem[k];
+      const newVal = newItem[k];
+      const oldStr = JSON.stringify(oldVal);
+      const newStr = JSON.stringify(newVal);
+      if (oldStr !== newStr) {
+        changes.push({ field: k, oldValue: oldVal, newValue: newVal });
+      }
+    }
+
+    if (changes.length > 0) {
+      const pageResult = latest.results.find((r) =>
+        r.extracted && r.extracted[mergeByKey] !== undefined && String(r.extracted[mergeByKey]) === keyStr
+      );
+      itemChanges.push({
+        id: keyStr,
+        url: pageResult?.url ?? '',
+        changes,
+      });
+    }
+  }
+
+  return {
+    configName: base.configName,
+    baseTime: base.startTime,
+    newTime: latest.startTime,
+    durationMs: latest.startTime - base.startTime,
+    pagesAdded,
+    pagesRemoved,
+    pagesStillFailing,
+    pagesRecovered,
+    pagesFailed,
+    itemChanges,
+    summary: {
+      basePagesCrawled: base.pagesCrawled,
+      newPagesCrawled: latest.pagesCrawled,
+      basePagesFailed: base.pagesFailed,
+      newPagesFailed: latest.pagesFailed,
+      pagesAddedCount: pagesAdded.length,
+      pagesRemovedCount: pagesRemoved.length,
+      pagesStillFailingCount: pagesStillFailing.length,
+      pagesRecoveredCount: pagesRecovered.length,
+      pagesFailedCount: pagesFailed.length,
+      itemChangesCount: itemChanges.length,
+    },
+  };
+}
+
+export function exportComparison(
+  comparison: CrawlComparisonResult,
+  filePath: string
+): void {
+  ensureDir(filePath);
+  fs.writeFileSync(filePath, JSON.stringify(comparison, null, 2), 'utf-8');
 }
 
 function ensureDir(filePath: string): void {

@@ -12,7 +12,6 @@
       "id": "1001",
       "category": "electronics"
     },
-    "category": "electronics",
     "name": "iPhone 15 Pro",
     "price": "¥7,999",
     "title": "iPhone 15 Pro",
@@ -32,7 +31,6 @@
       "id": "1002",
       "category": "electronics"
     },
-    "category": "electronics",
     "name": "MacBook Pro 14\"",
     "price": "¥14,999",
     "title": "MacBook Pro 14\"",
@@ -52,7 +50,6 @@
       "id": "1003",
       "category": "accessories"
     },
-    "category": "accessories",
     "name": "AirPods Pro",
     "price": "¥1,899",
     "title": "AirPods Pro",
@@ -72,7 +69,6 @@
       "id": "1004",
       "category": "electronics"
     },
-    "category": "electronics",
     "name": "iPad Air",
     "price": "¥4,799",
     "title": "iPad Air",
@@ -92,7 +88,6 @@
       "id": "1005",
       "category": "wearables"
     },
-    "category": "wearables",
     "name": "Apple Watch Ultra",
     "price": "¥5,999",
     "title": "Apple Watch Ultra",
@@ -112,7 +107,6 @@
       "id": "1006",
       "category": "audio"
     },
-    "category": "audio",
     "name": "HomePod mini",
     "price": "¥749",
     "title": "HomePod mini",

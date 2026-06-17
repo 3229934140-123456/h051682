@@ -6,11 +6,11 @@
     "http://localhost:18923/broken"
   ],
   "summary": {
-    "pagesCrawled": 8,
-    "pagesFailed": 4,
-    "durationMs": 408,
-    "startTime": "2026-06-17T03:14:44.366Z",
-    "endTime": "2026-06-17T03:14:44.774Z"
+    "pagesCrawled": 11,
+    "pagesFailed": 1,
+    "durationMs": 413,
+    "startTime": "2026-06-17T03:39:48.189Z",
+    "endTime": "2026-06-17T03:39:48.602Z"
   },
   "pages": [
     {
@@ -73,7 +73,15 @@
         ]
       },
       "retryCount": 0,
-      "retryAttempts": []
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588190,
+          "recoverable": false
+        }
+      ]
     },
     {
       "url": "http://localhost:18923/products/page2",
@@ -118,7 +126,15 @@
         ]
       },
       "retryCount": 0,
-      "retryAttempts": []
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588211,
+          "recoverable": false
+        }
+      ]
     },
     {
       "url": "http://localhost:18923/products/page3",
@@ -146,7 +162,15 @@
         ]
       },
       "retryCount": 0,
-      "retryAttempts": []
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588222,
+          "recoverable": false
+        }
+      ]
     },
     {
       "url": "http://localhost:18923/products/1001",
@@ -159,7 +183,15 @@
         "stock": "库存: 128件"
       },
       "retryCount": 0,
-      "retryAttempts": []
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588233,
+          "recoverable": false
+        }
+      ]
     },
     {
       "url": "http://localhost:18923/products/1002",
@@ -172,7 +204,15 @@
         "stock": "库存: 56件"
       },
       "retryCount": 0,
-      "retryAttempts": []
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588244,
+          "recoverable": false
+        }
+      ]
     },
     {
       "url": "http://localhost:18923/products/1003",
@@ -185,7 +225,57 @@
         "stock": "库存: 320件"
       },
       "retryCount": 0,
-      "retryAttempts": []
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588255,
+          "recoverable": false
+        }
+      ]
+    },
+    {
+      "url": "http://localhost:18923/products/1004",
+      "status": 200,
+      "pageType": "/products/10",
+      "extracted": {
+        "id": 1004,
+        "title": "iPad Air",
+        "desc": "M1芯片，Liquid Retina显示屏，支持Apple Pencil第二代。",
+        "stock": "库存: 89件"
+      },
+      "retryCount": 0,
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588266,
+          "recoverable": false
+        }
+      ]
+    },
+    {
+      "url": "http://localhost:18923/products/1005",
+      "status": 200,
+      "pageType": "/products/10",
+      "extracted": {
+        "id": 1005,
+        "title": "Apple Watch Ultra",
+        "desc": "49mm钛金属表壳，精准双频GPS，100米防水。",
+        "stock": "库存: 34件"
+      },
+      "retryCount": 0,
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588277,
+          "recoverable": false
+        }
+      ]
     },
     {
       "url": "http://localhost:18923/products/page3.html",
@@ -213,7 +303,36 @@
         ]
       },
       "retryCount": 0,
-      "retryAttempts": []
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588288,
+          "recoverable": false
+        }
+      ]
+    },
+    {
+      "url": "http://localhost:18923/products/1006",
+      "status": 200,
+      "pageType": "/products/10",
+      "extracted": {
+        "id": 1006,
+        "title": "HomePod mini",
+        "desc": "360度音效，Siri智能助手，智能家居中枢。",
+        "stock": "库存: 156件"
+      },
+      "retryCount": 0,
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588298,
+          "recoverable": false
+        }
+      ]
     },
     {
       "url": "http://localhost:18923/flaky",
@@ -225,15 +344,22 @@
           "attempt": 1,
           "httpStatus": 500,
           "error": "HTTP 500",
-          "timestamp": 1781666084378,
+          "timestamp": 1781667588202,
           "recoverable": true
         },
         {
           "attempt": 2,
           "httpStatus": 500,
           "error": "HTTP 500",
-          "timestamp": 1781666084480,
+          "timestamp": 1781667588309,
           "recoverable": true
+        },
+        {
+          "attempt": 3,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588509,
+          "recoverable": false
         }
       ]
     }
@@ -244,31 +370,174 @@
       "error": "HTTP 404",
       "httpStatus": 404,
       "recoverable": false,
-      "retryCount": 0
-    },
-    {
-      "url": "http://localhost:18923/products/1004",
-      "error": "HTTP 404",
-      "httpStatus": 404,
-      "recoverable": false,
-      "retryCount": 0
-    },
-    {
-      "url": "http://localhost:18923/products/1005",
-      "error": "HTTP 404",
-      "httpStatus": 404,
-      "recoverable": false,
-      "retryCount": 0
-    },
-    {
-      "url": "http://localhost:18923/products/1006",
-      "error": "HTTP 404",
-      "httpStatus": 404,
-      "recoverable": false,
-      "retryCount": 0
+      "retryCount": 0,
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 404,
+          "error": "HTTP 404",
+          "timestamp": 1781667588202,
+          "recoverable": false
+        }
+      ]
     }
   ],
   "retryLog": [
+    {
+      "url": "http://localhost:18923/products/page1",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588190,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
+    {
+      "url": "http://localhost:18923/broken",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 404,
+          "error": "HTTP 404",
+          "timestamp": 1781667588202,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 404,
+      "finalSuccess": false,
+      "finalError": "HTTP 404"
+    },
+    {
+      "url": "http://localhost:18923/products/page2",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588211,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
+    {
+      "url": "http://localhost:18923/products/page3",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588222,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
+    {
+      "url": "http://localhost:18923/products/1001",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588233,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
+    {
+      "url": "http://localhost:18923/products/1002",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588244,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
+    {
+      "url": "http://localhost:18923/products/1003",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588255,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
+    {
+      "url": "http://localhost:18923/products/1004",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588266,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
+    {
+      "url": "http://localhost:18923/products/1005",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588277,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
+    {
+      "url": "http://localhost:18923/products/page3.html",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588288,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
+    {
+      "url": "http://localhost:18923/products/1006",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588298,
+          "recoverable": false
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    },
     {
       "url": "http://localhost:18923/flaky",
       "attempts": [
@@ -276,15 +545,22 @@
           "attempt": 1,
           "httpStatus": 500,
           "error": "HTTP 500",
-          "timestamp": 1781666084378,
+          "timestamp": 1781667588202,
           "recoverable": true
         },
         {
           "attempt": 2,
           "httpStatus": 500,
           "error": "HTTP 500",
-          "timestamp": 1781666084480,
+          "timestamp": 1781667588309,
           "recoverable": true
+        },
+        {
+          "attempt": 3,
+          "httpStatus": 200,
+          "error": "",
+          "timestamp": 1781667588509,
+          "recoverable": false
         }
       ],
       "finalStatus": 200,
@@ -367,7 +643,10 @@
       },
       "category": "electronics",
       "name": "iPad Air",
-      "price": "¥4,799"
+      "price": "¥4,799",
+      "title": "iPad Air",
+      "desc": "M1芯片，Liquid Retina显示屏，支持Apple Pencil第二代。",
+      "stock": "库存: 89件"
     },
     {
       "tagName": "article",
@@ -384,7 +663,10 @@
       },
       "category": "wearables",
       "name": "Apple Watch Ultra",
-      "price": "¥5,999"
+      "price": "¥5,999",
+      "title": "Apple Watch Ultra",
+      "desc": "49mm钛金属表壳，精准双频GPS，100米防水。",
+      "stock": "库存: 34件"
     },
     {
       "tagName": "article",
@@ -401,7 +683,10 @@
       },
       "category": "audio",
       "name": "HomePod mini",
-      "price": "¥749"
+      "price": "¥749",
+      "title": "HomePod mini",
+      "desc": "360度音效，Siri智能助手，智能家居中枢。",
+      "stock": "库存: 156件"
     }
   ],
   "linkPipeline": {

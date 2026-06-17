@@ -1,0 +1,79 @@
+{
+  "configName": "对比测试",
+  "baseTime": 1781667589033,
+  "newTime": 1781667589234,
+  "durationMs": 201,
+  "pagesAdded": [],
+  "pagesRemoved": [
+    "http://localhost:18923/products/page3",
+    "http://localhost:18923/products/1006"
+  ],
+  "pagesStillFailing": [],
+  "pagesRecovered": [],
+  "pagesFailed": [],
+  "itemChanges": [
+    {
+      "id": "1001",
+      "url": "http://localhost:18923/products/1001",
+      "changes": [
+        {
+          "field": "price",
+          "oldValue": "¥7,999",
+          "newValue": "¥8,199"
+        }
+      ]
+    },
+    {
+      "id": "1002",
+      "url": "http://localhost:18923/products/1002",
+      "changes": [
+        {
+          "field": "price",
+          "oldValue": "¥14,999",
+          "newValue": "¥15,299"
+        }
+      ]
+    },
+    {
+      "id": "1004",
+      "url": "http://localhost:18923/products/1004",
+      "changes": [
+        {
+          "field": "price",
+          "oldValue": "¥4,799",
+          "newValue": "¥4,999"
+        }
+      ]
+    },
+    {
+      "id": "1006",
+      "url": "",
+      "changes": [
+        {
+          "field": "title",
+          "oldValue": "HomePod mini"
+        },
+        {
+          "field": "desc",
+          "oldValue": "360度音效，Siri智能助手，智能家居中枢。"
+        },
+        {
+          "field": "stock",
+          "oldValue": "库存: 156件"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "basePagesCrawled": 11,
+    "newPagesCrawled": 9,
+    "basePagesFailed": 0,
+    "newPagesFailed": 0,
+    "pagesAddedCount": 0,
+    "pagesRemovedCount": 2,
+    "pagesStillFailingCount": 0,
+    "pagesRecoveredCount": 0,
+    "pagesFailedCount": 0,
+    "itemChangesCount": 4
+  }
+}

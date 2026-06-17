@@ -259,6 +259,37 @@ export interface CrawlReport {
   linkPipeline?: LinkPipelineView;
 }
 
+export interface FieldDiff {
+  field: string;
+  oldValue: unknown;
+  newValue: unknown;
+}
+
+export interface CrawlComparisonResult {
+  configName: string;
+  baseTime: number;
+  newTime: number;
+  durationMs: number;
+  pagesAdded: string[];
+  pagesRemoved: string[];
+  pagesStillFailing: Array<{ url: string; oldError: string; newError: string }>;
+  pagesRecovered: string[];
+  pagesFailed: Array<{ url: string; oldStatus: number; newError: string }>;
+  itemChanges: Array<{ id: string; url: string; changes: FieldDiff[] }>;
+  summary: {
+    basePagesCrawled: number;
+    newPagesCrawled: number;
+    basePagesFailed: number;
+    newPagesFailed: number;
+    pagesAddedCount: number;
+    pagesRemovedCount: number;
+    pagesStillFailingCount: number;
+    pagesRecoveredCount: number;
+    pagesFailedCount: number;
+    itemChangesCount: number;
+  };
+}
+
 export interface URLOptions {
   baseURL?: string;
   removeFragment?: boolean;
@@ -267,4 +298,5 @@ export interface URLOptions {
   removeTrailingSlash?: boolean;
 }
 
-export type ExportFormat = 'report' | 'items-json' | 'items-csv';
+export type ExportFormat = 'report' | 'items-json' | 'items-csv' | 'items-success' | 'errors' | 'pipeline';
+

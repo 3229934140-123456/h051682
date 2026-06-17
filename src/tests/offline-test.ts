@@ -53,6 +53,8 @@ function createTestServer(port: number): Promise<http.Server> {
       filePath = path.join(TEST_PAGES_DIR, 'products', 'detail-1004.html');
     } else if (urlPath === '/products/1005' || urlPath === '/products/detail-1005') {
       filePath = path.join(TEST_PAGES_DIR, 'products', 'detail-1005.html');
+    } else if (urlPath === '/products/1006' || urlPath === '/products/detail-1006') {
+      filePath = path.join(TEST_PAGES_DIR, 'products', 'detail-1006.html');
     } else if (urlPath === '/about' || urlPath === '/about/') {
       filePath = path.join(TEST_PAGES_DIR, 'about', 'index.html');
     } else {
@@ -109,6 +111,8 @@ async function runTests() {
     URLDeduplicator,
     createCrawlConfig, CrawlConfigRunner,
     exportReport, exportItems, exportCrawl, exportItemsCSV,
+    exportItemsSuccess, exportErrors, exportPipeline,
+    compareCrawlResults, exportComparison,
     createActionSequence, click, typeText,
   } = require('..');
 
@@ -535,6 +539,289 @@ async function runTests() {
       console.log();
       console.log(`  CSV 内容预览 (前 3 行):`);
       lines.slice(0, 3).forEach((l, i) => console.log(`    ${i + 1}. ${l.substring(0, 100)}${l.length > 100 ? '…' : ''}`));
+    }
+  }
+  console.log();
+
+  // ──── 测试9: 完整重试时间线流水账 ────
+  console.log('━━━ 测试9: 重试时间线 — 完整流水账，包含最后成功请求 ━━━');
+  {
+    flakyRequestCount = 0;
+    const config = createCrawlConfig('重试时间线测试', [`${BASE_URL}/flaky`, `${BASE_URL}/broken`], {
+      followLinks: false, maxDepth: 1, maxConcurrency: 1, rateLimit: 100,
+      maxRetries: 3, retryDelay: 100,
+    });
+    const runner = new CrawlConfigRunner();
+    const r = await runner.run(config);
+
+    const flakyEntry = r.retryLog.find((e: any) => e.url.includes('/flaky'));
+    assert('flaky 有 retryLog 条目', flakyEntry !== undefined);
+    if (flakyEntry) {
+      assert('flaky attempts 长度 = 3（2次失败 + 1次成功）', flakyEntry.attempts.length === 3, `len=${flakyEntry.attempts.length}`);
+      assert('flaky 第1次 HTTP 500', flakyEntry.attempts[0].httpStatus === 500, `status=${flakyEntry.attempts[0].httpStatus}`);
+      assert('flaky 第2次 HTTP 500', flakyEntry.attempts[1].httpStatus === 500, `status=${flakyEntry.attempts[1].httpStatus}`);
+      assert('flaky 第3次 HTTP 200', flakyEntry.attempts[2].httpStatus === 200, `status=${flakyEntry.attempts[2].httpStatus}`);
+      assert('flaky 第3次 error 为空（成功）', flakyEntry.attempts[2].error === '', `error="${flakyEntry.attempts[2].error}"`);
+      assert('flaky 第3次 recoverable=false（成功）', flakyEntry.attempts[2].recoverable === false);
+
+      const timestamps = flakyEntry.attempts.map((a: any) => a.timestamp);
+      assert('时间戳严格递增', timestamps[0] < timestamps[1] && timestamps[1] < timestamps[2], `${timestamps.join(' < ')}`);
+      assert('最终状态 200', flakyEntry.finalStatus === 200, `finalStatus=${flakyEntry.finalStatus}`);
+      assert('最终成功', flakyEntry.finalSuccess === true);
+    }
+
+    const brokenEntry = r.retryLog.find((e: any) => e.url.includes('/broken'));
+    assert('broken 有 retryLog 条目', brokenEntry !== undefined);
+    if (brokenEntry) {
+      assert('broken attempts 长度 = 1（404不可恢复，不重试）', brokenEntry.attempts.length === 1, `len=${brokenEntry.attempts.length}`);
+      assert('broken 每次都是 404', brokenEntry.attempts.every((a: any) => a.httpStatus === 404));
+      assert('broken 每次 recoverable=false', brokenEntry.attempts.every((a: any) => a.recoverable === false));
+      assert('broken 最终失败', brokenEntry.finalSuccess === false);
+      assert('broken 最终状态 404', brokenEntry.finalStatus === 404);
+    }
+
+    const flakyPage = r.results.find((p: any) => p.url.includes('/flaky'));
+    assert('flaky 页面有 retryAttempts 数组', Array.isArray(flakyPage?.retryAttempts) && flakyPage.retryAttempts.length === 3, `len=${flakyPage?.retryAttempts?.length}`);
+
+    console.log();
+    console.log('  flaky 时间线:');
+    if (flakyEntry) {
+      flakyEntry.attempts.forEach((a: any, i: number) => {
+        const status = a.httpStatus === 200 ? '✅ 200 OK' : `❌ HTTP ${a.httpStatus}`;
+        console.log(`    ${i + 1}. ${new Date(a.timestamp).toISOString().slice(11, 23)}  ${status}  ${a.recoverable ? '[可恢复]' : a.error ? '[永久失败]' : '[成功]'}  ${a.error || '(成功)'}`);
+      });
+      console.log(`    最终: ${flakyEntry.finalSuccess ? '成功' : '失败'} HTTP ${flakyEntry.finalStatus}`);
+    }
+  }
+  console.log();
+
+  // ──── 测试10: 全量商品合并 ────
+  console.log('━━━ 测试10: 全量商品合并 — 6个商品都有列表+详情字段 ━━━');
+  {
+    const listExtract = createSchema({
+      products: listRule('products', '.product', {
+        id: attrRule('id', '.product', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+        category: dataRule('category', '.product', 'category'),
+        name: textRule('name', '.product-name'),
+        price: textRule('price', '.price'),
+      }),
+    });
+    const detailExtract = createSchema({
+      id: attrRule('id', '.detail', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+      title: textRule('title', '.product-title'),
+      desc: textRule('desc', '.product-desc'),
+      stock: textRule('stock', '.product-stock'),
+    });
+    const config = createCrawlConfig('全量合并', [`${BASE_URL}/products/page1`], {
+      maxDepth: 2, maxConcurrency: 2, rateLimit: 100, maxRetries: 1,
+      pageRules: [
+        { pattern: '/products/page', extract: listExtract, followLinks: true, followLinkPatterns: [/\/products\/page/, /\/products\/10/], denyLinkPatterns: [/\/about/] },
+        { pattern: '/products/10', extract: detailExtract, followLinks: false },
+      ],
+      mergeBy: 'id',
+    });
+
+    const runner = new CrawlConfigRunner();
+    const r = await runner.run(config);
+
+    assert('成功页面 >= 9（3列表页 + 6详情页）', r.pagesCrawled >= 9, `pages=${r.pagesCrawled}`);
+    assert('失败页面 = 0', r.pagesFailed === 0, `failed=${r.pagesFailed}`);
+    assert('mergedItems 有 6 个商品', r.mergedItems?.length === 6, `items=${r.mergedItems?.length}`);
+
+    if (r.mergedItems && r.mergedItems.length === 6) {
+      const ids = r.mergedItems.map((m: any) => m.id).sort();
+      assert('商品 id 1001-1006 齐全', JSON.stringify(ids) === '[1001,1002,1003,1004,1005,1006]', `ids=${JSON.stringify(ids)}`);
+
+      const allHaveListFields = r.mergedItems.every((m: any) =>
+        m.id !== undefined && m.name !== undefined && m.price !== undefined && m.category !== undefined
+      );
+      assert('所有商品都有列表字段（id/name/price/category）', allHaveListFields);
+
+      const allHaveDetailFields = r.mergedItems.every((m: any) =>
+        m.title !== undefined && m.desc !== undefined && m.stock !== undefined
+      );
+      assert('所有商品都有详情字段（title/desc/stock）', allHaveDetailFields);
+
+      console.log();
+      console.log('  全量合并结果:');
+      r.mergedItems.forEach((m: any, i: number) => {
+        console.log(`    ${i + 1}. id=${m.id}  ${m.name}  ${m.price}  库存: ${(m.stock || '').replace('库存: ', '')}  desc=${(m.desc || '').substring(0, 15)}...`);
+      });
+    }
+  }
+  console.log();
+
+  // ──── 测试11: 运行历史对比 ────
+  console.log('━━━ 测试11: 历史对比 — 两次运行差异分析 ━━━');
+  {
+    const listExtract = createSchema({
+      products: listRule('products', '.product', {
+        id: attrRule('id', '.product', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+        category: dataRule('category', '.product', 'category'),
+        name: textRule('name', '.product-name'),
+        price: textRule('price', '.price'),
+      }),
+    });
+    const detailExtract = createSchema({
+      id: attrRule('id', '.detail', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+      title: textRule('title', '.product-title'),
+      desc: textRule('desc', '.product-desc'),
+      stock: textRule('stock', '.product-stock'),
+    });
+
+    const config1 = createCrawlConfig('对比测试', [`${BASE_URL}/products/page1`, `${BASE_URL}/flaky`], {
+      maxDepth: 2, maxConcurrency: 2, rateLimit: 100, maxRetries: 3, retryDelay: 50,
+      pageRules: [
+        { pattern: '/products/page', extract: listExtract, followLinks: true, followLinkPatterns: [/\/products\/page/, /\/products\/10/], denyLinkPatterns: [/\/about/] },
+        { pattern: '/products/10', extract: detailExtract, followLinks: false },
+      ],
+      mergeBy: 'id',
+    });
+
+    const runner = new CrawlConfigRunner();
+    flakyRequestCount = 0;
+    console.log('  第1次运行...');
+    const r1 = await runner.run(config1);
+
+    // 第2次运行：修改价格，模拟字段变化
+    // 先修改 page1.html 和 page2.html 的价格
+    const page1Path = path.join(TEST_PAGES_DIR, 'products', 'page1.html');
+    const page2Path = path.join(TEST_PAGES_DIR, 'products', 'page2.html');
+    const originalPage1 = fs.readFileSync(page1Path, 'utf-8');
+    const originalPage2 = fs.readFileSync(page2Path, 'utf-8');
+    const modifiedPage1 = originalPage1
+      .replace('¥7,999', '¥8,199')
+      .replace('¥14,999', '¥15,299');
+    const modifiedPage2 = originalPage2
+      .replace('¥4,799', '¥4,999');
+    fs.writeFileSync(page1Path, modifiedPage1, 'utf-8');
+    fs.writeFileSync(page2Path, modifiedPage2, 'utf-8');
+
+    // 第2次运行配置：去掉 page1 和 page2 中的 page3 链接，模拟消失链接
+    const page1Modified = modifiedPage1.replace('<a href="/products/page3">第3页</a>', '');
+    const page2Modified = modifiedPage2.replace('<a href="/products/page3">第3页</a>', '');
+    fs.writeFileSync(page1Path, page1Modified, 'utf-8');
+    fs.writeFileSync(page2Path, page2Modified, 'utf-8');
+
+    try {
+      console.log('  第2次运行（价格已修改）...');
+      flakyRequestCount = 999; // 让 flaky 直接成功，没有重试，模拟失败恢复
+      const r2 = await runner.run(config1);
+
+      // 对比
+      const comparison = compareCrawlResults(r1, r2, 'id');
+      assert('对比结果配置名正确', comparison.configName === '对比测试');
+      assert('对比结果 summary 正确', comparison.summary.basePagesCrawled > 0 && comparison.summary.newPagesCrawled > 0);
+      assert('itemChangesCount >= 3（三个价格修改）', comparison.summary.itemChangesCount >= 3, `changes=${comparison.summary.itemChangesCount}`);
+
+      const priceChange = comparison.itemChanges.find((c: any) => c.changes.some((ch: any) => ch.field === 'price'));
+      assert('有 price 字段变化', priceChange !== undefined);
+      if (priceChange) {
+        assert('price 从 7999 变到 8199', priceChange.changes.some((ch: any) => ch.field === 'price' && ch.oldValue === '¥7,999' && ch.newValue === '¥8,199'));
+      }
+
+      const pagesRemoved = comparison.pagesRemoved.filter((u: string) => u.includes('page3'));
+      assert('page3 消失', pagesRemoved.length > 0, `removed=${comparison.pagesRemoved.join(',')}`);
+
+      const comparisonPath = path.join(path.resolve(__dirname, '../../reports'), 'comparison.json');
+      exportComparison(comparison, comparisonPath);
+      assert('对比结果文件已导出', fs.existsSync(comparisonPath), comparisonPath);
+
+      console.log();
+      console.log('  对比汇总:');
+      console.log(`    第1次: ${r1.pagesCrawled} 页, ${r1.pagesFailed} 失败`);
+      console.log(`    第2次: ${r2.pagesCrawled} 页, ${r2.pagesFailed} 失败`);
+      console.log(`    新增链接: ${comparison.pagesAdded.length}`);
+      console.log(`    消失链接: ${comparison.pagesRemoved.length}  (${pagesRemoved.join(', ') || '无'})`);
+      console.log(`    失败恢复: ${comparison.pagesRecovered.length}`);
+      console.log(`    仍在失败: ${comparison.pagesStillFailing.length}`);
+      console.log(`    新失败: ${comparison.pagesFailed.length}`);
+      console.log(`    字段变化: ${comparison.itemChanges.length} 个商品`);
+      if (comparison.itemChanges.length > 0) {
+        comparison.itemChanges.slice(0, 3).forEach((c: any) => {
+          console.log(`      - id=${c.id}: ${c.changes.map((ch: any) => `${ch.field}: ${ch.oldValue} → ${ch.newValue}`).join(', ')}`);
+        });
+      }
+      console.log(`    对比报告: ${comparisonPath}`);
+    } finally {
+      // 还原 page1.html 和 page2.html
+      fs.writeFileSync(page1Path, originalPage1, 'utf-8');
+      fs.writeFileSync(page2Path, originalPage2, 'utf-8');
+    }
+  }
+  console.log();
+
+  // ──── 测试12: 细粒度导出格式 ────
+  console.log('━━━ 测试12: 细粒度导出 — items-success / errors / pipeline ━━━');
+  {
+    flakyRequestCount = 0;
+    const listExtract = createSchema({
+      products: listRule('products', '.product', {
+        id: attrRule('id', '.product', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+        name: textRule('name', '.product-name'),
+        price: textRule('price', '.price'),
+      }),
+    });
+    const detailExtract = createSchema({
+      id: attrRule('id', '.detail', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+      title: textRule('title', '.product-title'),
+      desc: textRule('desc', '.product-desc'),
+      stock: textRule('stock', '.product-stock'),
+    });
+    const config = createCrawlConfig('细粒度导出', [`${BASE_URL}/products/page1`, `${BASE_URL}/flaky`, `${BASE_URL}/broken`], {
+      maxDepth: 2, maxConcurrency: 2, rateLimit: 100, maxRetries: 3, retryDelay: 50,
+      pageRules: [
+        { pattern: '/products/page', extract: listExtract, followLinks: true, followLinkPatterns: [/\/products\/page/, /\/products\/10/], denyLinkPatterns: [/\/about/] },
+        { pattern: '/products/10', extract: detailExtract, followLinks: false },
+      ],
+      mergeBy: 'id',
+    });
+
+    const runner = new CrawlConfigRunner();
+    const r = await runner.run(config);
+
+    const reportDir = path.resolve(__dirname, '../../reports');
+    const successPath = path.join(reportDir, 'items-success.json');
+    const errorsPath = path.join(reportDir, 'errors.json');
+    const pipelinePath = path.join(reportDir, 'pipeline.json');
+
+    exportCrawl(r, successPath, 'items-success');
+    exportCrawl(r, errorsPath, 'errors');
+    exportCrawl(r, pipelinePath, 'pipeline');
+
+    assert('items-success 导出存在', fs.existsSync(successPath), successPath);
+    assert('errors 导出存在', fs.existsSync(errorsPath), errorsPath);
+    assert('pipeline 导出存在', fs.existsSync(pipelinePath), pipelinePath);
+
+    if (fs.existsSync(successPath)) {
+      const successItems = JSON.parse(fs.readFileSync(successPath, 'utf-8'));
+      assert('items-success 是数组', Array.isArray(successItems));
+      assert('items-success 有 6 个完整商品', successItems.length === 6, `len=${successItems.length}`);
+      assert('items-success 每个都有 name+desc', successItems.every((item: any) => item.name && item.desc));
+    }
+
+    if (fs.existsSync(errorsPath)) {
+      const errors = JSON.parse(fs.readFileSync(errorsPath, 'utf-8'));
+      assert('errors 是数组', Array.isArray(errors));
+      assert('errors 有 1 条（/broken）', errors.length >= 1, `len=${errors.length}`);
+      assert('errors 里包含 /broken', errors.some((e: any) => e.url.includes('/broken')));
+    }
+
+    if (fs.existsSync(pipelinePath)) {
+      const pipeline = JSON.parse(fs.readFileSync(pipelinePath, 'utf-8'));
+      assert('pipeline 有 seedUrls', Array.isArray(pipeline.seedUrls) && pipeline.seedUrls.length >= 1);
+      assert('pipeline 有 summary', pipeline.summary !== undefined && pipeline.summary.enqueued > 0);
+      assert('pipeline 有 discovered 数组', Array.isArray(pipeline.discovered) && pipeline.discovered.length > 0);
+    }
+
+    console.log();
+    console.log('  细粒度导出:');
+    console.log(`    成功商品 (${(fs.statSync(successPath).size / 1024).toFixed(1)} KB): ${successPath}`);
+    console.log(`    失败链接 (${(fs.statSync(errorsPath).size / 1024).toFixed(1)} KB): ${errorsPath}`);
+    console.log(`    管道视图 (${(fs.statSync(pipelinePath).size / 1024).toFixed(1)} KB): ${pipelinePath}`);
+    if (fs.existsSync(successPath)) {
+      const items = JSON.parse(fs.readFileSync(successPath, 'utf-8'));
+      console.log(`    成功商品数量: ${items.length}`);
     }
   }
   console.log();

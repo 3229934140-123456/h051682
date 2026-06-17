@@ -49,6 +49,13 @@ export class Fetcher {
         finalStatus = result.status;
 
         if (result.success) {
+          retryAttempts.push({
+            attempt: attempt + 1,
+            httpStatus: result.status,
+            error: '',
+            timestamp: Date.now(),
+            recoverable: false,
+          });
           return { ...result, attempts: attempt + 1, retryAttempts };
         }
 
@@ -65,6 +72,13 @@ export class Fetcher {
           throw new Error(errMsg);
         }
 
+        retryAttempts.push({
+          attempt: attempt + 1,
+          httpStatus: result.status,
+          error: `HTTP ${result.status}`,
+          timestamp: Date.now(),
+          recoverable: this.isRecoverable(result.status),
+        });
         return { ...result, attempts: attempt + 1, retryAttempts };
       } catch (error) {
         lastError = error as Error;

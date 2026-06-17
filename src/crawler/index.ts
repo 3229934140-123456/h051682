@@ -237,7 +237,8 @@ export class Crawler {
       } catch (error) {
         task.status = 'failed';
         this.deduplicator.markAsFailed(task.url, normalizeURL(task.url));
-        this.emit('task-failed', task, error);
+        const retryAttempts = (error as any).retryAttempts;
+        this.emit('task-failed', task, error, retryAttempts);
       } finally {
         this.activeTasks.delete(task.id);
       }
@@ -250,7 +251,9 @@ export class Crawler {
     task.retryCount = fetchResult.attempts - 1;
 
     if (!fetchResult.success) {
-      throw new Error(fetchResult.error ?? `HTTP ${fetchResult.status}`);
+      const err = new Error(fetchResult.error ?? `HTTP ${fetchResult.status}`);
+      (err as any).retryAttempts = fetchResult.retryAttempts;
+      throw err;
     }
 
     const dom = parseHTML(fetchResult.html);
@@ -424,5 +427,5 @@ export function createCrawler(options: CrawlerOptions = {}): Crawler {
   return new Crawler(options);
 }
 
-export { CrawlConfigRunner, runCrawlConfig, createCrawlConfig, exportReport, exportItems, exportCrawl } from './crawl-config-runner';
+export { CrawlConfigRunner, runCrawlConfig, createCrawlConfig, exportReport, exportItems, exportCrawl, compareCrawlResults, exportComparison, exportItemsSuccess, exportErrors, exportPipeline, exportItemsCSV } from './crawl-config-runner';
 export { URLDeduplicator, createURLDeduplicator } from './url-deduplicator';
