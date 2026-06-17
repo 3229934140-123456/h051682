@@ -1,0 +1,25 @@
+{
+  "name": "web-scraper-core",
+  "version": "1.0.0",
+  "description": "浏览器自动化与网页抓取框架核心",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/examples/basic-usage.js"
+  },
+  "keywords": [
+    "web-scraper",
+    "crawler",
+    "css-selector",
+    "dom-parser",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
