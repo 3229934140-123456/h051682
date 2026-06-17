@@ -1,16 +1,16 @@
 {
-  "configName": "报告导出测试",
+  "configName": "报告导出综合测试",
   "seedUrls": [
     "http://localhost:18923/products/page1",
     "http://localhost:18923/flaky",
     "http://localhost:18923/broken"
   ],
   "summary": {
-    "pagesCrawled": 9,
+    "pagesCrawled": 8,
     "pagesFailed": 4,
-    "durationMs": 422,
-    "startTime": "2026-06-17T02:49:13.800Z",
-    "endTime": "2026-06-17T02:49:14.222Z"
+    "durationMs": 408,
+    "startTime": "2026-06-17T03:14:44.366Z",
+    "endTime": "2026-06-17T03:14:44.774Z"
   },
   "pages": [
     {
@@ -18,78 +18,224 @@
       "status": 200,
       "pageType": "/products/page",
       "extracted": {
-        "title": "商品列表"
+        "products": [
+          {
+            "tagName": "article",
+            "id": 1001,
+            "className": "product",
+            "classList": [
+              "product"
+            ],
+            "data-id": "1001",
+            "data-category": "electronics",
+            "data": {
+              "id": "1001",
+              "category": "electronics"
+            },
+            "category": "electronics",
+            "name": "iPhone 15 Pro",
+            "price": "¥7,999"
+          },
+          {
+            "tagName": "article",
+            "id": 1002,
+            "className": "product",
+            "classList": [
+              "product"
+            ],
+            "data-id": "1002",
+            "data-category": "electronics",
+            "data": {
+              "id": "1002",
+              "category": "electronics"
+            },
+            "category": "electronics",
+            "name": "MacBook Pro 14\"",
+            "price": "¥14,999"
+          },
+          {
+            "tagName": "article",
+            "id": 1003,
+            "className": "product",
+            "classList": [
+              "product"
+            ],
+            "data-id": "1003",
+            "data-category": "accessories",
+            "data": {
+              "id": "1003",
+              "category": "accessories"
+            },
+            "category": "accessories",
+            "name": "AirPods Pro",
+            "price": "¥1,899"
+          }
+        ]
       },
-      "retryCount": 0
+      "retryCount": 0,
+      "retryAttempts": []
     },
     {
       "url": "http://localhost:18923/products/page2",
       "status": 200,
       "pageType": "/products/page",
       "extracted": {
-        "title": "商品列表 - 第2页"
+        "products": [
+          {
+            "tagName": "article",
+            "id": 1004,
+            "className": "product",
+            "classList": [
+              "product"
+            ],
+            "data-id": "1004",
+            "data-category": "electronics",
+            "data": {
+              "id": "1004",
+              "category": "electronics"
+            },
+            "category": "electronics",
+            "name": "iPad Air",
+            "price": "¥4,799"
+          },
+          {
+            "tagName": "article",
+            "id": 1005,
+            "className": "product",
+            "classList": [
+              "product"
+            ],
+            "data-id": "1005",
+            "data-category": "wearables",
+            "data": {
+              "id": "1005",
+              "category": "wearables"
+            },
+            "category": "wearables",
+            "name": "Apple Watch Ultra",
+            "price": "¥5,999"
+          }
+        ]
       },
-      "retryCount": 0
+      "retryCount": 0,
+      "retryAttempts": []
     },
     {
       "url": "http://localhost:18923/products/page3",
       "status": 200,
       "pageType": "/products/page",
       "extracted": {
-        "title": "商品列表 - 第3页"
+        "products": [
+          {
+            "tagName": "article",
+            "id": 1006,
+            "className": "product",
+            "classList": [
+              "product"
+            ],
+            "data-id": "1006",
+            "data-category": "audio",
+            "data": {
+              "id": "1006",
+              "category": "audio"
+            },
+            "category": "audio",
+            "name": "HomePod mini",
+            "price": "¥749"
+          }
+        ]
       },
-      "retryCount": 0
-    },
-    {
-      "url": "http://localhost:18923/about",
-      "status": 200,
-      "pageType": "default",
-      "retryCount": 0
+      "retryCount": 0,
+      "retryAttempts": []
     },
     {
       "url": "http://localhost:18923/products/1001",
       "status": 200,
       "pageType": "/products/10",
       "extracted": {
-        "id": "1001",
-        "title": "iPhone 15 Pro"
+        "id": 1001,
+        "title": "iPhone 15 Pro",
+        "desc": "搭载A17 Pro芯片，钛金属设计，全新相机系统。",
+        "stock": "库存: 128件"
       },
-      "retryCount": 0
+      "retryCount": 0,
+      "retryAttempts": []
     },
     {
       "url": "http://localhost:18923/products/1002",
       "status": 200,
       "pageType": "/products/10",
       "extracted": {
-        "id": "1002",
-        "title": "MacBook Pro 14\""
+        "id": 1002,
+        "title": "MacBook Pro 14\"",
+        "desc": "M3 Pro芯片，Liquid Retina XDR显示屏。",
+        "stock": "库存: 56件"
       },
-      "retryCount": 0
+      "retryCount": 0,
+      "retryAttempts": []
     },
     {
       "url": "http://localhost:18923/products/1003",
       "status": 200,
       "pageType": "/products/10",
       "extracted": {
-        "id": "1003",
-        "title": "AirPods Pro"
+        "id": 1003,
+        "title": "AirPods Pro",
+        "desc": "主动降噪，自适应通透模式，个性化空间音频。",
+        "stock": "库存: 320件"
       },
-      "retryCount": 0
+      "retryCount": 0,
+      "retryAttempts": []
     },
     {
       "url": "http://localhost:18923/products/page3.html",
       "status": 200,
       "pageType": "/products/page",
       "extracted": {
-        "title": "商品列表 - 第3页"
+        "products": [
+          {
+            "tagName": "article",
+            "id": 1006,
+            "className": "product",
+            "classList": [
+              "product"
+            ],
+            "data-id": "1006",
+            "data-category": "audio",
+            "data": {
+              "id": "1006",
+              "category": "audio"
+            },
+            "category": "audio",
+            "name": "HomePod mini",
+            "price": "¥749"
+          }
+        ]
       },
-      "retryCount": 0
+      "retryCount": 0,
+      "retryAttempts": []
     },
     {
       "url": "http://localhost:18923/flaky",
       "status": 200,
       "pageType": "default",
-      "retryCount": 2
+      "retryCount": 2,
+      "retryAttempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 500,
+          "error": "HTTP 500",
+          "timestamp": 1781666084378,
+          "recoverable": true
+        },
+        {
+          "attempt": 2,
+          "httpStatus": 500,
+          "error": "HTTP 500",
+          "timestamp": 1781666084480,
+          "recoverable": true
+        }
+      ]
     }
   ],
   "errors": [
@@ -122,19 +268,388 @@
       "retryCount": 0
     }
   ],
-  "retryLog": [],
+  "retryLog": [
+    {
+      "url": "http://localhost:18923/flaky",
+      "attempts": [
+        {
+          "attempt": 1,
+          "httpStatus": 500,
+          "error": "HTTP 500",
+          "timestamp": 1781666084378,
+          "recoverable": true
+        },
+        {
+          "attempt": 2,
+          "httpStatus": 500,
+          "error": "HTTP 500",
+          "timestamp": 1781666084480,
+          "recoverable": true
+        }
+      ],
+      "finalStatus": 200,
+      "finalSuccess": true
+    }
+  ],
   "mergedItems": [
     {
-      "id": "1001",
-      "title": "iPhone 15 Pro"
+      "tagName": "article",
+      "id": 1001,
+      "className": "product",
+      "classList": [
+        "product"
+      ],
+      "data-id": "1001",
+      "data-category": "electronics",
+      "data": {
+        "id": "1001",
+        "category": "electronics"
+      },
+      "category": "electronics",
+      "name": "iPhone 15 Pro",
+      "price": "¥7,999",
+      "title": "iPhone 15 Pro",
+      "desc": "搭载A17 Pro芯片，钛金属设计，全新相机系统。",
+      "stock": "库存: 128件"
     },
     {
-      "id": "1002",
-      "title": "MacBook Pro 14\""
+      "tagName": "article",
+      "id": 1002,
+      "className": "product",
+      "classList": [
+        "product"
+      ],
+      "data-id": "1002",
+      "data-category": "electronics",
+      "data": {
+        "id": "1002",
+        "category": "electronics"
+      },
+      "category": "electronics",
+      "name": "MacBook Pro 14\"",
+      "price": "¥14,999",
+      "title": "MacBook Pro 14\"",
+      "desc": "M3 Pro芯片，Liquid Retina XDR显示屏。",
+      "stock": "库存: 56件"
     },
     {
-      "id": "1003",
-      "title": "AirPods Pro"
+      "tagName": "article",
+      "id": 1003,
+      "className": "product",
+      "classList": [
+        "product"
+      ],
+      "data-id": "1003",
+      "data-category": "accessories",
+      "data": {
+        "id": "1003",
+        "category": "accessories"
+      },
+      "category": "accessories",
+      "name": "AirPods Pro",
+      "price": "¥1,899",
+      "title": "AirPods Pro",
+      "desc": "主动降噪，自适应通透模式，个性化空间音频。",
+      "stock": "库存: 320件"
+    },
+    {
+      "tagName": "article",
+      "id": 1004,
+      "className": "product",
+      "classList": [
+        "product"
+      ],
+      "data-id": "1004",
+      "data-category": "electronics",
+      "data": {
+        "id": "1004",
+        "category": "electronics"
+      },
+      "category": "electronics",
+      "name": "iPad Air",
+      "price": "¥4,799"
+    },
+    {
+      "tagName": "article",
+      "id": 1005,
+      "className": "product",
+      "classList": [
+        "product"
+      ],
+      "data-id": "1005",
+      "data-category": "wearables",
+      "data": {
+        "id": "1005",
+        "category": "wearables"
+      },
+      "category": "wearables",
+      "name": "Apple Watch Ultra",
+      "price": "¥5,999"
+    },
+    {
+      "tagName": "article",
+      "id": 1006,
+      "className": "product",
+      "classList": [
+        "product"
+      ],
+      "data-id": "1006",
+      "data-category": "audio",
+      "data": {
+        "id": "1006",
+        "category": "audio"
+      },
+      "category": "audio",
+      "name": "HomePod mini",
+      "price": "¥749"
     }
-  ]
+  ],
+  "linkPipeline": {
+    "seedUrls": [
+      "http://localhost:18923/products/page1",
+      "http://localhost:18923/flaky",
+      "http://localhost:18923/broken"
+    ],
+    "discovered": [
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "(seed)",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/flaky",
+        "foundFrom": "(seed)",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/broken",
+        "foundFrom": "(seed)",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/page2",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/page3",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/about",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "deny"
+      },
+      {
+        "url": "http://localhost:18923/products/1001",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/1002",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/1003",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/page2",
+        "foundFrom": "http://localhost:18923/products/page1",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page3",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/about",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "deny"
+      },
+      {
+        "url": "http://localhost:18923/products/1004",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/1005",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/page3.html",
+        "foundFrom": "http://localhost:18923/products/page2",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page2",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "dedup"
+      },
+      {
+        "url": "http://localhost:18923/about",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "deny"
+      },
+      {
+        "url": "http://localhost:18923/products/1006",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "enqueued"
+      },
+      {
+        "url": "http://localhost:18923/products/page1",
+        "foundFrom": "http://localhost:18923/products/page3",
+        "reason": "dedup"
+      }
+    ],
+    "byReason": {
+      "enqueued": [
+        {
+          "url": "http://localhost:18923/products/page1",
+          "foundFrom": "(seed)",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/flaky",
+          "foundFrom": "(seed)",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/broken",
+          "foundFrom": "(seed)",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/products/page2",
+          "foundFrom": "http://localhost:18923/products/page1",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/products/page3",
+          "foundFrom": "http://localhost:18923/products/page1",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/products/1001",
+          "foundFrom": "http://localhost:18923/products/page1",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/products/1002",
+          "foundFrom": "http://localhost:18923/products/page1",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/products/1003",
+          "foundFrom": "http://localhost:18923/products/page1",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/products/1004",
+          "foundFrom": "http://localhost:18923/products/page2",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/products/1005",
+          "foundFrom": "http://localhost:18923/products/page2",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/products/page3.html",
+          "foundFrom": "http://localhost:18923/products/page2",
+          "reason": "enqueued"
+        },
+        {
+          "url": "http://localhost:18923/products/1006",
+          "foundFrom": "http://localhost:18923/products/page3",
+          "reason": "enqueued"
+        }
+      ],
+      "deny": [
+        {
+          "url": "http://localhost:18923/about",
+          "foundFrom": "http://localhost:18923/products/page1",
+          "reason": "deny"
+        },
+        {
+          "url": "http://localhost:18923/about",
+          "foundFrom": "http://localhost:18923/products/page2",
+          "reason": "deny"
+        },
+        {
+          "url": "http://localhost:18923/about",
+          "foundFrom": "http://localhost:18923/products/page3",
+          "reason": "deny"
+        }
+      ],
+      "dedup": [
+        {
+          "url": "http://localhost:18923/products/page2",
+          "foundFrom": "http://localhost:18923/products/page1",
+          "reason": "dedup"
+        },
+        {
+          "url": "http://localhost:18923/products/page1",
+          "foundFrom": "http://localhost:18923/products/page2",
+          "reason": "dedup"
+        },
+        {
+          "url": "http://localhost:18923/products/page3",
+          "foundFrom": "http://localhost:18923/products/page2",
+          "reason": "dedup"
+        },
+        {
+          "url": "http://localhost:18923/products/page1",
+          "foundFrom": "http://localhost:18923/products/page3",
+          "reason": "dedup"
+        },
+        {
+          "url": "http://localhost:18923/products/page2",
+          "foundFrom": "http://localhost:18923/products/page3",
+          "reason": "dedup"
+        },
+        {
+          "url": "http://localhost:18923/products/page1",
+          "foundFrom": "http://localhost:18923/products/page3",
+          "reason": "dedup"
+        },
+        {
+          "url": "http://localhost:18923/products/page1",
+          "foundFrom": "http://localhost:18923/products/page3",
+          "reason": "dedup"
+        }
+      ]
+    },
+    "summary": {
+      "total": 22,
+      "enqueued": 12,
+      "dedup": 7,
+      "filter": 0,
+      "domain": 0,
+      "depth": 0,
+      "deny": 3,
+      "nonHttp": 0,
+      "notAllowed": 0
+    }
+  }
 }

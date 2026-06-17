@@ -1,4 +1,4 @@
-import type { FetchOptions, CrawlResult, CrawlTask } from '../types';
+import type { FetchOptions, CrawlResult, CrawlTask, RetryAttempt } from '../types';
 
 export interface FetchResult {
   success: boolean;
@@ -7,6 +7,7 @@ export interface FetchResult {
   headers: Record<string, string>;
   responseTime: number;
   attempts: number;
+  retryAttempts: RetryAttempt[];
   error?: string;
 }
 
@@ -36,43 +37,84 @@ export class Fetcher {
 
   public async fetch(task: CrawlTask): Promise<FetchResult> {
     const options = { ...this.defaultOptions, ...task.fetchOptions };
-
+    const retryAttempts: RetryAttempt[] = [];
     let lastError: Error | null = null;
+    let finalStatus = 0;
 
     for (let attempt = 0; attempt <= options.retries; attempt++) {
       try {
         await this.rateLimiter.wait();
 
         const result = await this.doFetch(task.url, options);
+        finalStatus = result.status;
 
         if (result.success) {
-          return { ...result, attempts: attempt + 1 };
+          return { ...result, attempts: attempt + 1, retryAttempts };
         }
 
         if (this.shouldRetry(result.status, attempt, options.retries)) {
-          throw new Error(`HTTP ${result.status}`);
+          const errMsg = `HTTP ${result.status}`;
+          const recoverable = this.isRecoverable(result.status);
+          retryAttempts.push({
+            attempt: attempt + 1,
+            httpStatus: result.status,
+            error: errMsg,
+            timestamp: Date.now(),
+            recoverable,
+          });
+          throw new Error(errMsg);
         }
 
-        return { ...result, attempts: attempt + 1 };
+        return { ...result, attempts: attempt + 1, retryAttempts };
       } catch (error) {
         lastError = error as Error;
 
         if (attempt < options.retries) {
+          const statusFromMsg = this.extractStatusFromError(lastError.message);
+          if (retryAttempts.length === 0 || retryAttempts[retryAttempts.length - 1].attempt !== attempt + 1) {
+            retryAttempts.push({
+              attempt: attempt + 1,
+              httpStatus: statusFromMsg || finalStatus || 0,
+              error: lastError.message,
+              timestamp: Date.now(),
+              recoverable: this.isRecoverable(statusFromMsg || finalStatus || 0),
+            });
+          }
           const delay = this.calculateRetryDelay(attempt, options.retryDelay);
           await this.delay(delay);
+        } else if (retryAttempts.length === 0 || retryAttempts[retryAttempts.length - 1].attempt !== attempt + 1) {
+          const statusFromMsg = this.extractStatusFromError(lastError.message);
+          retryAttempts.push({
+            attempt: attempt + 1,
+            httpStatus: statusFromMsg || finalStatus || 0,
+            error: lastError.message,
+            timestamp: Date.now(),
+            recoverable: this.isRecoverable(statusFromMsg || finalStatus || 0),
+          });
         }
       }
     }
 
     return {
       success: false,
-      status: 0,
+      status: finalStatus,
       html: '',
       headers: {},
       responseTime: 0,
       attempts: options.retries + 1,
+      retryAttempts,
       error: lastError?.message ?? 'Unknown error',
     };
+  }
+
+  private extractStatusFromError(message: string): number {
+    const match = message.match(/HTTP\s*(\d+)/i);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  private isRecoverable(status: number): boolean {
+    const retryableStatuses = [408, 429, 500, 502, 503, 504];
+    return retryableStatuses.includes(status);
   }
 
   private async doFetch(url: string, options: typeof this.defaultOptions & FetchOptions): Promise<FetchResult> {
@@ -110,6 +152,7 @@ export class Fetcher {
         headers,
         responseTime: Date.now() - startTime,
         attempts: 1,
+        retryAttempts: [],
       };
     } catch (error) {
       return {
@@ -119,6 +162,7 @@ export class Fetcher {
         headers: {},
         responseTime: Date.now() - startTime,
         attempts: 1,
+        retryAttempts: [],
         error: (error as Error).message,
       };
     }
@@ -126,9 +170,7 @@ export class Fetcher {
 
   private shouldRetry(status: number, attempt: number, maxRetries: number): boolean {
     if (attempt >= maxRetries) return false;
-
-    const retryableStatuses = [408, 429, 500, 502, 503, 504];
-    return retryableStatuses.includes(status);
+    return this.isRecoverable(status);
   }
 
   private calculateRetryDelay(attempt: number, baseDelay: number): number {

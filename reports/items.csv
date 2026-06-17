@@ -1,0 +1,7 @@
+﻿tagName,id,className,classList,data-id,data-category,data,category,name,price,title,desc,stock
+article,1001,product,"[""product""]",1001,electronics,"{""id"":""1001"",""category"":""electronics""}",electronics,iPhone 15 Pro,"¥7,999",iPhone 15 Pro,搭载A17 Pro芯片，钛金属设计，全新相机系统。,库存: 128件
+article,1002,product,"[""product""]",1002,electronics,"{""id"":""1002"",""category"":""electronics""}",electronics,"MacBook Pro 14""","¥14,999","MacBook Pro 14""",M3 Pro芯片，Liquid Retina XDR显示屏。,库存: 56件
+article,1003,product,"[""product""]",1003,accessories,"{""id"":""1003"",""category"":""accessories""}",accessories,AirPods Pro,"¥1,899",AirPods Pro,主动降噪，自适应通透模式，个性化空间音频。,库存: 320件
+article,1004,product,"[""product""]",1004,electronics,"{""id"":""1004"",""category"":""electronics""}",electronics,iPad Air,"¥4,799",,,
+article,1005,product,"[""product""]",1005,wearables,"{""id"":""1005"",""category"":""wearables""}",wearables,Apple Watch Ultra,"¥5,999",,,
+article,1006,product,"[""product""]",1006,audio,"{""id"":""1006"",""category"":""audio""}",audio,HomePod mini,¥749,,,

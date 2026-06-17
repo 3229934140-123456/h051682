@@ -4,9 +4,13 @@ import type {
   CrawlPageResult,
   CrawlErrorEntry,
   RetryLogEntry,
+  RetryAttempt,
   ExtractionResult,
   CrawlReport,
   PageRule,
+  LinkPipelineView,
+  LinkPipelineEntry,
+  ExportFormat,
 } from '../types';
 import { Crawler } from './index';
 import * as fs from 'fs';
@@ -32,40 +36,38 @@ export class CrawlConfigRunner {
     const successes: CrawlPageResult[] = [];
     const errors: CrawlErrorEntry[] = [];
     const retryLog: RetryLogEntry[] = [];
+    const retryAttemptsByUrl: Map<string, RetryAttempt[]> = new Map();
+    const finalStatusByUrl: Map<string, { status: number; success: boolean; error?: string }> = new Map();
 
-    crawler.on('task-completed', (task: { url: string; retryCount: number }, result: { status: number; extracted?: ExtractionResult }) => {
+    crawler.on('task-completed', (task: { url: string; retryCount: number }, result: { status: number; extracted?: ExtractionResult; retryAttempts?: RetryAttempt[] }) => {
       const pageType = this.matchPageType(task.url, config.pageRules);
+      if (result.retryAttempts && result.retryAttempts.length > 0) {
+        retryAttemptsByUrl.set(task.url, result.retryAttempts);
+      }
+      finalStatusByUrl.set(task.url, { status: result.status, success: true });
       successes.push({
         url: task.url,
         status: result.status,
         pageType,
         extracted: result.extracted,
         retryCount: task.retryCount,
+        retryAttempts: result.retryAttempts,
       });
     });
 
-    crawler.on('task-failed', (task: { url: string; retryCount: number }, error: unknown) => {
+    crawler.on('task-failed', (task: { url: string; retryCount: number }, error: unknown, retryAttemptsParam?: RetryAttempt[]) => {
       const errMsg = error instanceof Error ? error.message : String(error);
       const httpStatus = this.extractHttpStatus(errMsg);
       const recoverable = httpStatus >= 500 || httpStatus === 408 || httpStatus === 429;
+      finalStatusByUrl.set(task.url, { status: httpStatus, success: false, error: errMsg });
       errors.push({
         url: task.url,
         error: errMsg,
         httpStatus,
         recoverable,
         retryCount: task.retryCount,
+        retryAttempts: retryAttemptsParam,
       });
-
-      if (task.retryCount > 0) {
-        retryLog.push({
-          url: task.url,
-          attempt: task.retryCount,
-          httpStatus,
-          error: errMsg,
-          timestamp: Date.now(),
-          recoverable,
-        });
-      }
     });
 
     const defaultExtract = config.extract;
@@ -77,12 +79,18 @@ export class CrawlConfigRunner {
         followLinks: true,
         linkSelector: defaultLinkSelector,
         maxDepth: config.maxDepth,
+        pageRules: config.pageRules,
       });
 
       const results = crawler.getResults();
       for (const [url, crawlResult] of results) {
         const pageType = this.matchPageType(url, config.pageRules);
         const rule = this.matchPageRule(url, config.pageRules);
+
+        if (crawlResult.retryAttempts && crawlResult.retryAttempts.length > 0) {
+          retryAttemptsByUrl.set(url, crawlResult.retryAttempts);
+          finalStatusByUrl.set(url, { status: crawlResult.status, success: true });
+        }
 
         if (rule) {
           const { DataExtractor } = require('../extraction');
@@ -104,7 +112,8 @@ export class CrawlConfigRunner {
               status: crawlResult.status,
               pageType,
               extracted,
-              retryCount: 0,
+              retryCount: crawlResult.retryAttempts ? crawlResult.retryAttempts.length : 0,
+              retryAttempts: crawlResult.retryAttempts,
             });
           }
         }
@@ -121,16 +130,36 @@ export class CrawlConfigRunner {
       if (successes.length === 0) {
         const results = crawler.getResults();
         for (const [url, crawlResult] of results) {
+          if (crawlResult.retryAttempts && crawlResult.retryAttempts.length > 0) {
+            retryAttemptsByUrl.set(url, crawlResult.retryAttempts);
+          }
           successes.push({
             url,
             status: crawlResult.status,
             pageType: 'default',
             extracted: crawlResult.extracted,
-            retryCount: 0,
+            retryCount: crawlResult.retryAttempts ? crawlResult.retryAttempts.length : 0,
+            retryAttempts: crawlResult.retryAttempts,
           });
         }
       }
     }
+
+    for (const [url, attempts] of retryAttemptsByUrl.entries()) {
+      const finalStatus = finalStatusByUrl.get(url);
+      retryLog.push({
+        url,
+        attempts,
+        finalStatus: finalStatus?.status ?? 0,
+        finalSuccess: finalStatus?.success ?? false,
+        finalError: finalStatus?.error,
+      });
+    }
+
+    const linkPipeline: LinkPipelineView | undefined = this.buildLinkPipeline(
+      config.seedUrls,
+      crawler.getLinkPipeline()
+    );
 
     const endTime = Date.now();
 
@@ -151,6 +180,32 @@ export class CrawlConfigRunner {
       errors,
       retryLog,
       mergedItems,
+      linkPipeline,
+    };
+  }
+
+  private buildLinkPipeline(seedUrls: string[], entries: LinkPipelineEntry[]): LinkPipelineView {
+    const byReason: Record<string, LinkPipelineEntry[]> = {};
+    for (const e of entries) {
+      if (!byReason[e.reason]) byReason[e.reason] = [];
+      byReason[e.reason].push(e);
+    }
+
+    return {
+      seedUrls: [...seedUrls],
+      discovered: entries,
+      byReason,
+      summary: {
+        total: entries.length,
+        enqueued: (byReason.enqueued ?? []).length,
+        dedup: (byReason.dedup ?? []).length,
+        filter: (byReason.filter ?? []).length,
+        domain: (byReason.domain ?? []).length,
+        depth: (byReason.depth ?? []).length,
+        deny: (byReason.deny ?? []).length,
+        nonHttp: (byReason['non-http'] ?? []).length,
+        notAllowed: (byReason['not-allowed'] ?? []).length,
+      },
     };
   }
 
@@ -282,12 +337,78 @@ export function exportReport(result: CrawlConfigResult, filePath: string): void 
     errors: result.errors,
     retryLog: result.retryLog,
     mergedItems: result.mergedItems,
+    linkPipeline: result.linkPipeline,
   };
 
+  ensureDir(filePath);
+  fs.writeFileSync(filePath, JSON.stringify(report, null, 2), 'utf-8');
+}
+
+export function exportItems(result: CrawlConfigResult, filePath: string): void {
+  const items = result.mergedItems ?? [];
+  ensureDir(filePath);
+  fs.writeFileSync(filePath, JSON.stringify(items, null, 2), 'utf-8');
+}
+
+export function exportCrawl(result: CrawlConfigResult, filePath: string, format: ExportFormat = 'report'): void {
+  switch (format) {
+    case 'report':
+      exportReport(result, filePath);
+      break;
+    case 'items-json':
+      exportItems(result, filePath);
+      break;
+    case 'items-csv':
+      exportItemsCSV(result, filePath);
+      break;
+    default:
+      exportReport(result, filePath);
+  }
+}
+
+export function exportItemsCSV(result: CrawlConfigResult, filePath: string): void {
+  const items = result.mergedItems ?? [];
+  if (items.length === 0) {
+    ensureDir(filePath);
+    fs.writeFileSync(filePath, '', 'utf-8');
+    return;
+  }
+
+  const allKeys: string[] = [];
+  const keySet = new Set<string>();
+  for (const item of items) {
+    for (const key of Object.keys(item)) {
+      if (!keySet.has(key)) {
+        keySet.add(key);
+        allKeys.push(key);
+      }
+    }
+  }
+
+  const escape = (v: unknown): string => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'object') {
+      const str = JSON.stringify(v);
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
+  const header = allKeys.join(',');
+  const rows = items.map((item) => allKeys.map((k) => escape(item[k])).join(','));
+  const csv = [header, ...rows].join('\n');
+
+  ensureDir(filePath);
+  fs.writeFileSync(filePath, '\uFEFF' + csv, 'utf-8');
+}
+
+function ensureDir(filePath: string): void {
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-
-  fs.writeFileSync(filePath, JSON.stringify(report, null, 2), 'utf-8');
 }

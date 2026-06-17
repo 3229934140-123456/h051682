@@ -1,0 +1,113 @@
+[
+  {
+    "tagName": "article",
+    "id": 1001,
+    "className": "product",
+    "classList": [
+      "product"
+    ],
+    "data-id": "1001",
+    "data-category": "electronics",
+    "data": {
+      "id": "1001",
+      "category": "electronics"
+    },
+    "category": "electronics",
+    "name": "iPhone 15 Pro",
+    "price": "¥7,999",
+    "title": "iPhone 15 Pro",
+    "desc": "搭载A17 Pro芯片，钛金属设计，全新相机系统。",
+    "stock": "库存: 128件"
+  },
+  {
+    "tagName": "article",
+    "id": 1002,
+    "className": "product",
+    "classList": [
+      "product"
+    ],
+    "data-id": "1002",
+    "data-category": "electronics",
+    "data": {
+      "id": "1002",
+      "category": "electronics"
+    },
+    "category": "electronics",
+    "name": "MacBook Pro 14\"",
+    "price": "¥14,999",
+    "title": "MacBook Pro 14\"",
+    "desc": "M3 Pro芯片，Liquid Retina XDR显示屏。",
+    "stock": "库存: 56件"
+  },
+  {
+    "tagName": "article",
+    "id": 1003,
+    "className": "product",
+    "classList": [
+      "product"
+    ],
+    "data-id": "1003",
+    "data-category": "accessories",
+    "data": {
+      "id": "1003",
+      "category": "accessories"
+    },
+    "category": "accessories",
+    "name": "AirPods Pro",
+    "price": "¥1,899",
+    "title": "AirPods Pro",
+    "desc": "主动降噪，自适应通透模式，个性化空间音频。",
+    "stock": "库存: 320件"
+  },
+  {
+    "tagName": "article",
+    "id": 1004,
+    "className": "product",
+    "classList": [
+      "product"
+    ],
+    "data-id": "1004",
+    "data-category": "electronics",
+    "data": {
+      "id": "1004",
+      "category": "electronics"
+    },
+    "category": "electronics",
+    "name": "iPad Air",
+    "price": "¥4,799"
+  },
+  {
+    "tagName": "article",
+    "id": 1005,
+    "className": "product",
+    "classList": [
+      "product"
+    ],
+    "data-id": "1005",
+    "data-category": "wearables",
+    "data": {
+      "id": "1005",
+      "category": "wearables"
+    },
+    "category": "wearables",
+    "name": "Apple Watch Ultra",
+    "price": "¥5,999"
+  },
+  {
+    "tagName": "article",
+    "id": 1006,
+    "className": "product",
+    "classList": [
+      "product"
+    ],
+    "data-id": "1006",
+    "data-category": "audio",
+    "data": {
+      "id": "1006",
+      "category": "audio"
+    },
+    "category": "audio",
+    "name": "HomePod mini",
+    "price": "¥749"
+  }
+]

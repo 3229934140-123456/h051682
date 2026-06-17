@@ -5,6 +5,9 @@ import type {
   ExtractionSchema,
   ExtractionResult,
   Action,
+  RetryAttempt,
+  LinkPipelineEntry,
+  PageRule,
 } from '../types';
 import { parseHTML, outerHTML } from '../html-parser';
 import { querySelectorAll } from '../css-selector';
@@ -43,6 +46,7 @@ export interface CrawlOptions {
   followLinks?: boolean;
   linkSelector?: string;
   maxDepth?: number;
+  pageRules?: PageRule[];
 }
 
 export class Crawler {
@@ -53,11 +57,12 @@ export class Crawler {
   private extractor: DataExtractor;
   private actionExecutor: ActionExecutor;
   private activeTasks: Map<string, CrawlTask> = new Map();
-  private results: Map<string, CrawlResult & { extracted?: ExtractionResult }> = new Map();
+  private results: Map<string, CrawlResult & { extracted?: ExtractionResult; retryAttempts?: RetryAttempt[] }> = new Map();
   private isRunning: boolean = false;
   private startTime: number = 0;
   private taskIdCounter: number = 0;
   private eventHandlers: Map<string, Function[]> = new Map();
+  private linkPipeline: LinkPipelineEntry[] = [];
 
   constructor(options: CrawlerOptions = {}) {
     this.options = {
@@ -71,7 +76,7 @@ export class Crawler {
       respectRobotsTxt: options.respectRobotsTxt ?? true,
       allowedDomains: options.allowedDomains ?? [],
       urlFilter: options.urlFilter ?? (() => true),
-    };
+    } as any;
 
     this.fetcher = createFetcher({
       timeout: this.options.requestTimeout,
@@ -87,14 +92,15 @@ export class Crawler {
     this.actionExecutor = new ActionExecutor();
   }
 
-  public async crawl(seedUrls: string | string[], options: CrawlOptions = {}): Promise<Map<string, CrawlResult & { extracted?: ExtractionResult }>> {
+  public async crawl(seedUrls: string | string[], options: CrawlOptions = {}): Promise<Map<string, CrawlResult & { extracted?: ExtractionResult; retryAttempts?: RetryAttempt[] }>> {
     this.startTime = Date.now();
     this.isRunning = true;
+    this.linkPipeline = [];
 
     const seeds = Array.isArray(seedUrls) ? seedUrls : [seedUrls];
 
     for (const url of seeds) {
-      this.addTask(url, 0);
+      this.addTask(url, 0, '(seed)');
     }
 
     await this.processQueue(options);
@@ -103,30 +109,40 @@ export class Crawler {
     return this.results;
   }
 
+  public getLinkPipeline(): LinkPipelineEntry[] {
+    return [...this.linkPipeline];
+  }
+
   public addTask(url: string, depth: number, parentUrl?: string): boolean {
     const normalizedURL = normalizeURL(url);
     const fingerprint = urlToFingerprint(normalizedURL);
 
-    if (this.deduplicator.isSeen(url, normalizedURL, fingerprint)) {
+    if (!isHTTPURL(url)) {
+      this.recordLink(url, parentUrl ?? '(unknown)', 'non-http');
       return false;
     }
 
-    if (!isHTTPURL(url)) {
+    if (this.deduplicator.isSeen(url, normalizedURL, fingerprint)) {
+      this.recordLink(url, parentUrl ?? '(unknown)', 'dedup');
       return false;
     }
 
     if (this.options.allowedDomains.length > 0) {
       const hostname = getHostname(url);
       if (!this.options.allowedDomains.includes(hostname)) {
+        this.recordLink(url, parentUrl ?? '(unknown)', 'domain');
         return false;
       }
     }
 
-    if (!this.options.urlFilter(url)) {
+    const urlFilter = (this.options as any).urlFilter as (url: string) => boolean;
+    if (!urlFilter(url)) {
+      this.recordLink(url, parentUrl ?? '(unknown)', 'filter');
       return false;
     }
 
     if (depth > this.options.maxDepth) {
+      this.recordLink(url, parentUrl ?? '(unknown)', 'depth');
       return false;
     }
 
@@ -144,6 +160,7 @@ export class Crawler {
     this.deduplicator.markAsPending(url, normalizedURL, fingerprint, depth);
 
     if (this.queue.enqueue(task)) {
+      this.recordLink(url, parentUrl ?? '(unknown)', 'enqueued');
       this.emit('task-added', task);
       return true;
     }
@@ -151,8 +168,40 @@ export class Crawler {
     return false;
   }
 
+  public tryAddTask(url: string, depth: number, parentUrl: string, pageRule?: PageRule): boolean {
+    if (pageRule) {
+      if (pageRule.denyLinkPatterns && pageRule.denyLinkPatterns.length > 0) {
+        for (const p of pageRule.denyLinkPatterns) {
+          if (this.urlMatches(url, p)) {
+            this.recordLink(url, parentUrl, 'deny');
+            return false;
+          }
+        }
+      }
+
+      if (pageRule.followLinkPatterns && pageRule.followLinkPatterns.length > 0) {
+        const matchAny = pageRule.followLinkPatterns.some((p) => this.urlMatches(url, p));
+        if (!matchAny) {
+          this.recordLink(url, parentUrl, 'not-allowed');
+          return false;
+        }
+      }
+    }
+
+    return this.addTask(url, depth, parentUrl);
+  }
+
+  private urlMatches(url: string, pattern: string | RegExp): boolean {
+    if (pattern instanceof RegExp) return pattern.test(url);
+    return url.includes(pattern);
+  }
+
+  private recordLink(url: string, foundFrom: string, reason: LinkPipelineEntry['reason']): void {
+    this.linkPipeline.push({ url, foundFrom, reason });
+  }
+
   private async processQueue(options: CrawlOptions): Promise<void> {
-    const maxConcurrency = this.options.maxConcurrency;
+    const maxConcurrency = (this.options as any).maxConcurrency as number;
     const workers: Promise<void>[] = [];
 
     for (let i = 0; i < maxConcurrency; i++) {
@@ -195,7 +244,7 @@ export class Crawler {
     }
   }
 
-  private async processTask(task: CrawlTask, options: CrawlOptions): Promise<CrawlResult & { extracted?: ExtractionResult }> {
+  private async processTask(task: CrawlTask, options: CrawlOptions): Promise<CrawlResult & { extracted?: ExtractionResult; retryAttempts?: RetryAttempt[] }> {
     const fetchResult = await this.fetcher.fetch(task);
 
     task.retryCount = fetchResult.attempts - 1;
@@ -226,8 +275,22 @@ export class Crawler {
       );
     }
 
-    if (options.followLinks && task.depth < (options.maxDepth ?? this.options.maxDepth)) {
-      const linkSelector = options.linkSelector ?? 'a[href]';
+    let currentPageRule: PageRule | undefined;
+    if (options.pageRules) {
+      for (const rule of options.pageRules) {
+        if (this.urlMatches(task.url, rule.pattern)) {
+          currentPageRule = rule;
+          break;
+        }
+      }
+    }
+
+    const shouldFollowLinks = currentPageRule
+      ? (currentPageRule.followLinks ?? options.followLinks ?? true)
+      : (options.followLinks ?? true);
+
+    if (shouldFollowLinks && task.depth < (options.maxDepth ?? (this.options as any).maxDepth)) {
+      const linkSelector = currentPageRule?.linkSelector ?? options.linkSelector ?? 'a[href]';
       const links = querySelectorAll(dom, linkSelector);
 
       for (const link of links) {
@@ -237,7 +300,7 @@ export class Crawler {
           const normalizedURL = normalizeURL(absoluteURL);
 
           if (isInternalURL(normalizedURL, task.url)) {
-            this.addTask(normalizedURL, task.depth + 1, task.url);
+            this.tryAddTask(normalizedURL, task.depth + 1, task.url, currentPageRule);
           }
         }
       }
@@ -252,6 +315,7 @@ export class Crawler {
       fetchedAt: Date.now(),
       responseTime: fetchResult.responseTime,
       extracted,
+      retryAttempts: fetchResult.retryAttempts,
     };
   }
 
@@ -339,7 +403,7 @@ export class Crawler {
     this.activeTasks.clear();
   }
 
-  public getResults(): Map<string, CrawlResult & { extracted?: ExtractionResult }> {
+  public getResults(): Map<string, CrawlResult & { extracted?: ExtractionResult; retryAttempts?: RetryAttempt[] }> {
     return this.results;
   }
 
@@ -360,5 +424,5 @@ export function createCrawler(options: CrawlerOptions = {}): Crawler {
   return new Crawler(options);
 }
 
-export { CrawlConfigRunner, runCrawlConfig, createCrawlConfig, exportReport } from './crawl-config-runner';
+export { CrawlConfigRunner, runCrawlConfig, createCrawlConfig, exportReport, exportItems, exportCrawl } from './crawl-config-runner';
 export { URLDeduplicator, createURLDeduplicator } from './url-deduplicator';

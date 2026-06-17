@@ -127,13 +127,20 @@ export interface CrawlResult {
   responseTime: number;
 }
 
-export interface RetryLogEntry {
-  url: string;
+export interface RetryAttempt {
   attempt: number;
   httpStatus: number;
   error: string;
   timestamp: number;
   recoverable: boolean;
+}
+
+export interface RetryLogEntry {
+  url: string;
+  attempts: RetryAttempt[];
+  finalStatus: number;
+  finalSuccess: boolean;
+  finalError?: string;
 }
 
 export interface CrawlerOptions {
@@ -154,6 +161,31 @@ export interface PageRule {
   extract: ExtractionSchema;
   followLinks?: boolean;
   linkSelector?: string;
+  followLinkPatterns?: Array<string | RegExp>;
+  denyLinkPatterns?: Array<string | RegExp>;
+}
+
+export interface LinkPipelineEntry {
+  url: string;
+  foundFrom: string;
+  reason: 'enqueued' | 'dedup' | 'filter' | 'domain' | 'depth' | 'deny' | 'non-http' | 'not-allowed';
+}
+
+export interface LinkPipelineView {
+  seedUrls: string[];
+  discovered: LinkPipelineEntry[];
+  byReason: Record<string, LinkPipelineEntry[]>;
+  summary: {
+    total: number;
+    enqueued: number;
+    dedup: number;
+    filter: number;
+    domain: number;
+    depth: number;
+    deny: number;
+    nonHttp: number;
+    notAllowed: number;
+  };
 }
 
 export interface CrawlConfig {
@@ -183,6 +215,7 @@ export interface CrawlPageResult {
   pageType: string;
   extracted?: ExtractionResult;
   retryCount: number;
+  retryAttempts?: RetryAttempt[];
 }
 
 export interface CrawlErrorEntry {
@@ -191,6 +224,7 @@ export interface CrawlErrorEntry {
   httpStatus: number;
   recoverable: boolean;
   retryCount: number;
+  retryAttempts?: RetryAttempt[];
 }
 
 export interface CrawlConfigResult {
@@ -205,6 +239,7 @@ export interface CrawlConfigResult {
   errors: CrawlErrorEntry[];
   retryLog: RetryLogEntry[];
   mergedItems?: ExtractionResult[];
+  linkPipeline?: LinkPipelineView;
 }
 
 export interface CrawlReport {
@@ -221,6 +256,7 @@ export interface CrawlReport {
   errors: CrawlErrorEntry[];
   retryLog: RetryLogEntry[];
   mergedItems?: ExtractionResult[];
+  linkPipeline?: LinkPipelineView;
 }
 
 export interface URLOptions {
@@ -230,3 +266,5 @@ export interface URLOptions {
   sortQueryParams?: boolean;
   removeTrailingSlash?: boolean;
 }
+
+export type ExportFormat = 'report' | 'items-json' | 'items-csv';

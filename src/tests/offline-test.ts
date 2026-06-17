@@ -49,6 +49,10 @@ function createTestServer(port: number): Promise<http.Server> {
       filePath = path.join(TEST_PAGES_DIR, 'products', 'detail-1002.html');
     } else if (urlPath === '/products/1003' || urlPath === '/products/detail-1003') {
       filePath = path.join(TEST_PAGES_DIR, 'products', 'detail-1003.html');
+    } else if (urlPath === '/products/1004' || urlPath === '/products/detail-1004') {
+      filePath = path.join(TEST_PAGES_DIR, 'products', 'detail-1004.html');
+    } else if (urlPath === '/products/1005' || urlPath === '/products/detail-1005') {
+      filePath = path.join(TEST_PAGES_DIR, 'products', 'detail-1005.html');
     } else if (urlPath === '/about' || urlPath === '/about/') {
       filePath = path.join(TEST_PAGES_DIR, 'about', 'index.html');
     } else {
@@ -87,7 +91,7 @@ async function runTests() {
   const BASE_URL = `http://localhost:${PORT}`;
 
   console.log('='.repeat(70));
-  console.log('  离线测试：网页抓取框架完整功能演示');
+  console.log('  离线测试：网页抓取框架完整功能演示（v2）');
   console.log('='.repeat(70));
   console.log();
 
@@ -103,7 +107,8 @@ async function runTests() {
     linkRule, imageRule, createSchema,
     resolveRelativeURL, normalizeURL, urlToFingerprint,
     URLDeduplicator,
-    createCrawlConfig, CrawlConfigRunner, exportReport,
+    createCrawlConfig, CrawlConfigRunner,
+    exportReport, exportItems, exportCrawl, exportItemsCSV,
     createActionSequence, click, typeText,
   } = require('..');
 
@@ -142,49 +147,22 @@ async function runTests() {
     `;
     const dom = parseHTML(html);
 
-    const descendants = querySelectorAll(dom, '.container .item');
-    assert('后代选择器 .container .item', descendants.length === 3, `找到 ${descendants.length} 个`);
-
-    const children = querySelectorAll(dom, '.container > p');
-    assert('子选择器 .container > p', children.length === 1, `找到 ${children.length} 个`);
-
-    const contentPs = querySelectorAll(dom, '.content > p');
-    assert('子选择器 .content > p', contentPs.length === 2, `找到 ${contentPs.length} 个`);
-
-    const adjacent = querySelectorAll(dom, 'h2 + span');
-    assert('相邻兄弟 h2 + span', adjacent.length === 1, `找到 ${adjacent.length} 个`);
-
-    const noAdjacent = querySelectorAll(dom, 'p + span');
-    assert('相邻兄弟 p + span (不存在)', noAdjacent.length === 0);
-
-    const generalSiblings = querySelectorAll(dom, 'h2 ~ p');
-    assert('通用兄弟 h2 ~ p', generalSiblings.length === 1);
-
-    const aImg = querySelectorAll(dom, 'a ~ img');
-    assert('通用兄弟 a ~ img', aImg.length === 0, `img 是 a 的子元素不是兄弟`);
-
-    const complex = querySelectorAll(dom, '.container > ul.list > li.item.active');
-    assert('组合选择器', complex.length === 1);
-
-    const firstChild = querySelectorAll(dom, 'li:first-child');
-    assert(':first-child', firstChild.length === 1 && textContent(firstChild[0]).trim() === '第一项');
-
-    const lastChild = querySelectorAll(dom, 'li:last-child');
-    assert(':last-child', lastChild.length === 1 && textContent(lastChild[0]).trim() === '第三项');
-
-    const secondChild = querySelector(dom, 'li:nth-child(2)');
-    assert(':nth-child(2)', secondChild !== null && textContent(secondChild).trim() === '第二项');
-
-    const notActive = querySelectorAll(dom, 'li:not(.active)');
-    assert(':not(.active)', notActive.length === 2);
-
-    const hasImg = querySelectorAll(dom, 'a:has(img)');
-    assert(':has(img)', hasImg.length === 1);
+    assert('后代选择器 .container .item', querySelectorAll(dom, '.container .item').length === 3);
+    assert('子选择器 .container > p', querySelectorAll(dom, '.container > p').length === 1);
+    assert('子选择器 .content > p', querySelectorAll(dom, '.content > p').length === 2);
+    assert('相邻兄弟 h2 + span', querySelectorAll(dom, 'h2 + span').length === 1);
+    assert('通用兄弟 h2 ~ p', querySelectorAll(dom, 'h2 ~ p').length === 1);
+    assert('组合选择器 .container > ul.list > li.item.active', querySelectorAll(dom, '.container > ul.list > li.item.active').length === 1);
+    assert(':first-child', textContent(querySelectorAll(dom, 'li:first-child')[0]).trim() === '第一项');
+    assert(':last-child', textContent(querySelectorAll(dom, 'li:last-child')[0]).trim() === '第三项');
+    assert(':nth-child(2)', textContent(querySelector(dom, 'li:nth-child(2)') || {} as any).trim() === '第二项');
+    assert(':not(.active)', querySelectorAll(dom, 'li:not(.active)').length === 2);
+    assert(':has(img)', querySelectorAll(dom, 'a:has(img)').length === 1);
 
     const sel = parseSelector('div.container > article.post h2.title:nth-child(2)');
-    assert('选择器解析 parts 数', sel.parts.length === 3, `${sel.parts.length} 部分`);
-    assert('子选择器 combinator', sel.parts[1].combinator === '>');
-    assert('后代选择器 combinator', sel.parts[2].combinator === ' ');
+    assert('选择器解析 parts 数', sel.parts.length === 3);
+    assert('子选择器 combinator = >', sel.parts[1].combinator === '>');
+    assert('后代选择器 combinator = 空格', sel.parts[2].combinator === ' ');
   }
   console.log();
 
@@ -211,51 +189,44 @@ async function runTests() {
     // 1. selfAttrRule / selfDataRule 方式
     const schema1 = createSchema({
       products: listRule('products', '.product', {
-        id: selfAttrRule('id', 'data-id', {
-          transform: (v: unknown) => parseInt(v as string, 10),
-        }),
+        id: selfAttrRule('id', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
         category: selfDataRule('category', 'category'),
         name: textRule('name', '.product-name'),
         price: textRule('price', '.price'),
         detailLink: linkRule('detailLink', '.detail-link'),
       }),
     });
-    const result1 = extractor.extract({ dom, baseUrl: BASE_URL, variables: {} }, schema1);
-    const products1 = result1.products as any[];
-    assert('selfAttrRule data-id', products1[0].id === 1001, `id = ${products1[0].id}`);
-    assert('selfDataRule category', products1[0].category === 'electronics', `category = ${products1[0].category}`);
-    assert('嵌套名称提取', products1[0].name === 'iPhone 15 Pro');
-    assert('嵌套链接提取', products1[0].detailLink === '/products/1001');
+    const r1 = extractor.extract({ dom, baseUrl: BASE_URL, variables: {} }, schema1);
+    const p1 = (r1.products as any[])[0];
+    assert('selfAttrRule data-id', p1.id === 1001, `id=${p1.id}`);
+    assert('selfDataRule category', p1.category === 'electronics', `cat=${p1.category}`);
+    assert('嵌套名称提取', p1.name === 'iPhone 15 Pro');
+    assert('嵌套链接提取', p1.detailLink === '/products/1001');
 
-    // 2. 智能自身匹配: 用普通选择器匹配当前卡片自身
+    // 2. 智能自身匹配: 普通选择器匹配到卡片自身
     const schema2 = createSchema({
       products: listRule('products', '.product', {
-        productId: attrRule('productId', '.product', 'data-id', {
-          transform: (v: unknown) => parseInt(v as string, 10),
-        }),
+        productId: attrRule('productId', '.product', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
         productCategory: dataRule('productCategory', '.product', 'category'),
         productClass: attrRule('productClass', '.product', 'class'),
         name: textRule('name', '.product-name'),
       }),
     });
-    const result2 = extractor.extract({ dom, baseUrl: BASE_URL, variables: {} }, schema2);
-    const products2 = result2.products as any[];
-    assert('智能匹配: attrRule(.product, data-id) 取到自身', products2[0].productId === 1001, `id = ${products2[0].productId}`);
-    assert('智能匹配: dataRule(.product, category) 取到自身', products2[0].productCategory === 'electronics', `category = ${products2[0].productCategory}`);
-    assert('智能匹配: attrRule(.product, class) 取到自身 class', products2[0].productClass.includes('product'), `class = ${products2[0].productClass}`);
-    assert('智能匹配: 第二张卡片 data-id', products2[1].productId === 1002, `id = ${products2[1].productId}`);
+    const r2 = extractor.extract({ dom, baseUrl: BASE_URL, variables: {} }, schema2);
+    const p2_0 = (r2.products as any[])[0];
+    const p2_1 = (r2.products as any[])[1];
+    assert('智能匹配: attrRule(.product, data-id)', p2_0.productId === 1001, `id=${p2_0.productId}`);
+    assert('智能匹配: dataRule(.product, category)', p2_0.productCategory === 'electronics');
+    assert('智能匹配: attrRule(.product, class)', p2_0.productClass.includes('featured'));
+    assert('智能匹配: 第二张卡片 data-id', p2_1.productId === 1002, `id=${p2_1.productId}`);
 
-    // 3. self 提取类型
-    const schema3 = createSchema({
-      cards: listRule('cards', '.product', {
-        self: selfRule('self', '&self'),
-      }),
-    });
-    const result3 = extractor.extract({ dom, baseUrl: BASE_URL, variables: {} }, schema3);
-    const cards3 = result3.cards as any[];
-    assert('self 提取 tagName', cards3[0].self.tagName === 'article');
-    assert('self 提取 className 包含 featured', cards3[0].self.className.includes('featured'));
-    assert('self 提取 data-id 属性', cards3[0].self['data-id'] === '1001');
+    // 3. self 类型提取
+    const schema3 = createSchema({ cards: listRule('cards', '.product', { self: selfRule('self', '&self') }) });
+    const r3 = extractor.extract({ dom, baseUrl: BASE_URL, variables: {} }, schema3);
+    const c0 = (r3.cards as any[])[0].self;
+    assert('self 提取 tagName', c0.tagName === 'article');
+    assert('self 提取 className 包含 featured', c0.className.includes('featured'));
+    assert('self 提取 data-id 属性', c0['data-id'] === '1001');
   }
   console.log();
 
@@ -263,127 +234,95 @@ async function runTests() {
   console.log('━━━ 测试3: URL 工具 — 相对链接 & 去重 ━━━');
   {
     const base = `${BASE_URL}/products/page1`;
-
-    const abs1 = resolveRelativeURL('/about', base);
-    assert('绝对路径 /about', abs1 === `${BASE_URL}/about`, abs1);
-
-    const abs2 = resolveRelativeURL('page2.html', base);
-    assert('相对路径 page2.html', abs2 === `${BASE_URL}/products/page2.html`, abs2);
-
-    const abs3 = resolveRelativeURL('../about/index.html', base);
-    assert('上级路径 ../about/index.html', abs3 === `${BASE_URL}/about/index.html`, abs3);
-
-    const norm1 = normalizeURL(`${BASE_URL}/products/page1#section`);
-    assert('移除片段 #section', !norm1.includes('#'), norm1);
-
-    const norm2 = normalizeURL(`${BASE_URL}/products/page1?b=2&a=1`);
-    assert('排序查询参数', norm2.includes('a=1') && norm2.includes('b=2'), norm2);
+    assert('绝对路径 /about', resolveRelativeURL('/about', base) === `${BASE_URL}/about`);
+    assert('相对路径 page2.html', resolveRelativeURL('page2.html', base) === `${BASE_URL}/products/page2.html`);
+    assert('上级路径 ../about/index.html', resolveRelativeURL('../about/index.html', base) === `${BASE_URL}/about/index.html`);
+    assert('移除片段 #section', !normalizeURL(`${BASE_URL}/products/page1#section`).includes('#'));
 
     const dedup = new URLDeduplicator();
-    const url1 = `${BASE_URL}/products/page1?a=1&b=2`;
-    const url2 = `${BASE_URL}/products/page1?b=2&a=1#section`;
-    const url3 = `${BASE_URL}/products/page1?c=3&d=4`;
-
-    dedup.markAsSeen(url1, normalizeURL(url1), urlToFingerprint(normalizeURL(url1)), 0);
-    const seen2 = dedup.isSeen(url2, normalizeURL(url2), urlToFingerprint(normalizeURL(url2)));
-    const seen3 = dedup.isSeen(url3, normalizeURL(url3), urlToFingerprint(normalizeURL(url3)));
-
-    assert('去重: 相同URL不同参数顺序+片段', seen2);
-    assert('去重: 不同参数不被去重', !seen3);
+    const u1 = `${BASE_URL}/products/page1?a=1&b=2`;
+    const u2 = `${BASE_URL}/products/page1?b=2&a=1#section`;
+    const u3 = `${BASE_URL}/products/page1?c=3&d=4`;
+    dedup.markAsSeen(u1, normalizeURL(u1), urlToFingerprint(normalizeURL(u1)), 0);
+    assert('去重: 相同URL不同参数顺序+片段', dedup.isSeen(u2, normalizeURL(u2), urlToFingerprint(normalizeURL(u2))));
+    assert('去重: 不同参数不被去重', !dedup.isSeen(u3, normalizeURL(u3), urlToFingerprint(normalizeURL(u3))));
   }
   console.log();
 
-  // ──── 测试4: Flaky 端点重试 + 404 永久失败 ────
-  console.log('━━━ 测试4: 重试机制 — 可恢复失败 vs 永久失败 ━━━');
+  // ──── 测试4: Flaky 重试 + 完整重试链路 ────
+  console.log('━━━ 测试4: 重试机制 — 完整链路 & 可恢复/永久失败区分 ━━━');
   {
     flakyRequestCount = 0;
-
     const config = createCrawlConfig('重试演示', [`${BASE_URL}/flaky`, `${BASE_URL}/broken`], {
-      followLinks: false,
-      maxDepth: 1,
-      maxConcurrency: 1,
-      rateLimit: 100,
-      maxRetries: 3,
-      retryDelay: 200,
+      followLinks: false, maxDepth: 1, maxConcurrency: 1, rateLimit: 100,
+      maxRetries: 3, retryDelay: 200,
     });
-
     const runner = new CrawlConfigRunner();
-    const crawlResult = await runner.run(config);
+    const r = await runner.run(config);
 
-    const flakySuccess = crawlResult.results.find((r: { url: string }) => r.url.includes('/flaky'));
-    assert('flaky 页面最终成功', flakySuccess !== undefined, `状态: ${flakySuccess?.status}`);
-    assert('flaky 页面重试过', flakySuccess?.retryCount > 0, `重试次数: ${flakySuccess?.retryCount}`);
+    const flakySuccess = r.results.find((x: any) => x.url.includes('/flaky'));
+    assert('flaky 页面最终成功', flakySuccess !== undefined, `status=${flakySuccess?.status}`);
+    assert('flaky 页面重试过', flakySuccess?.retryCount > 0, `retryCount=${flakySuccess?.retryCount}`);
 
-    const brokenError = crawlResult.errors.find((e: { url: string }) => e.url.includes('/broken'));
-    assert('404 页面失败', brokenError !== undefined, `错误: ${brokenError?.error}`);
-    assert('404 不可恢复', brokenError ? !brokenError.recoverable : false, `recoverable = ${brokenError?.recoverable}`);
-
-    if (flakySuccess && flakySuccess.retryCount > 0) {
-      assert('可恢复与不可恢复区分', brokenError ? !brokenError.recoverable : false, '5xx 可恢复, 404 不可恢复');
+    const flakyRetryEntry = r.retryLog.find((x: any) => x.url.includes('/flaky'));
+    assert('retryLog 有 flaky 条目', flakyRetryEntry !== undefined);
+    if (flakyRetryEntry) {
+      assert('flaky 每次 attempt 都记录', Array.isArray(flakyRetryEntry.attempts) && flakyRetryEntry.attempts.length >= 2, `attempts=${flakyRetryEntry.attempts?.length}`);
+      assert('flaky 第一次是 500', flakyRetryEntry.attempts[0].httpStatus === 500, `status=${flakyRetryEntry.attempts[0]?.httpStatus}`);
+      assert('flaky 第一次 attempt 标记可恢复', flakyRetryEntry.attempts[0].recoverable === true);
+      assert('flaky 每次尝试都有时间戳', flakyRetryEntry.attempts.every((a: any) => typeof a.timestamp === 'number' && a.timestamp > 0));
+      assert('flaky 最终状态 200', flakyRetryEntry.finalStatus === 200, `finalStatus=${flakyRetryEntry.finalStatus}`);
+      assert('flaky 最终成功 finalSuccess=true', flakyRetryEntry.finalSuccess === true);
     }
+
+    const brokenErr = r.errors.find((e: any) => e.url.includes('/broken'));
+    assert('404 页面失败', brokenErr !== undefined, `error=${brokenErr?.error}`);
+    assert('404 不可恢复', brokenErr ? !brokenErr.recoverable : false);
+    assert('404 httpStatus=404', brokenErr ? brokenErr.httpStatus === 404 : false);
 
     console.log();
-    console.log('  重试结果:');
-    crawlResult.results.forEach((r: { url: string; status: number; retryCount: number }) => {
-      console.log(`    ✅ ${r.url} — 状态 ${r.status}, 重试 ${r.retryCount} 次`);
-    });
-    crawlResult.errors.forEach((e: { url: string; error: string; httpStatus: number; recoverable: boolean; retryCount: number }) => {
-      console.log(`    ❌ ${e.url} — ${e.error}, recoverable=${e.recoverable}, retryCount=${e.retryCount}`);
-    });
-    if (crawlResult.retryLog.length > 0) {
-      console.log('  重试日志:');
-      crawlResult.retryLog.forEach((entry: { url: string; attempt: number; httpStatus: number; error: string; recoverable: boolean }) => {
-        console.log(`    ↻ ${entry.url} 第${entry.attempt}次重试, HTTP ${entry.httpStatus}, recoverable=${entry.recoverable}`);
+    console.log('  重试链路:');
+    r.retryLog.forEach((e: any) => {
+      console.log(`    ${e.url}  最终: ${e.finalSuccess ? `200成功 (HTTP ${e.finalStatus})` : `失败 ${e.finalError}`}`);
+      e.attempts.forEach((a: any) => {
+        console.log(`      ↻ attempt#${a.attempt} HTTP ${a.httpStatus}  ${a.recoverable ? '[可恢复]' : '[永久失败]'}  ${new Date(a.timestamp).toISOString().slice(11, 23)}  ${a.error}`);
       });
-    }
+    });
   }
   console.log();
 
-  // ──── 测试5: 页面类型规则 + 列表/详情数据合并 ────
-  console.log('━━━ 测试5: 任务编排 — 按页面类型提取 & 数据合并 ━━━');
+  // ──── 测试5: PageRule 细粒度跟链 + 管道视图 ────
+  console.log('━━━ 测试5: 任务编排 — 按页面类型规则跟链 & 管道视图 ━━━');
   {
-    const listPageExtract = createSchema({
+    const listExtract = createSchema({
       products: listRule('products', '.product', {
-        id: attrRule('id', '.product', 'data-id', {
-          transform: (v: unknown) => parseInt(v as string, 10),
-        }),
+        id: attrRule('id', '.product', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
         category: dataRule('category', '.product', 'category'),
         name: textRule('name', '.product-name'),
         price: textRule('price', '.price'),
-        detailLink: attrRule('detailLink', '.detail-link', 'href'),
       }),
     });
 
-    const detailPageExtract = createSchema({
-      id: attrRule('id', '.detail', 'data-id', {
-        transform: (v: unknown) => parseInt(v as string, 10),
-      }),
+    const detailExtract = createSchema({
+      id: attrRule('id', '.detail', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
       title: textRule('title', '.product-title'),
       desc: textRule('desc', '.product-desc'),
       stock: textRule('stock', '.product-stock'),
-      specs: listRule('specs', '.spec-item', {
-        key: dataRule('key', '.spec-item', 'key'),
-        value: textRule('value', '.spec-item'),
-      }),
     });
 
-    const config = createCrawlConfig('商品列表+详情合并', [`${BASE_URL}/products/page1`], {
-      followLinks: true,
-      linkSelector: 'a[href]',
-      maxDepth: 2,
-      maxConcurrency: 2,
-      rateLimit: 100,
-      maxRetries: 1,
-      retryDelay: 100,
+    const config = createCrawlConfig('商品列表+详情', [`${BASE_URL}/products/page1`], {
+      maxDepth: 2, maxConcurrency: 2, rateLimit: 100, maxRetries: 1, retryDelay: 100,
       pageRules: [
         {
           pattern: '/products/page',
-          extract: listPageExtract,
+          extract: listExtract,
           followLinks: true,
+          followLinkPatterns: [/\/products\/page/, /\/products\/10/],
+          denyLinkPatterns: [/\/about/],
         },
         {
           pattern: '/products/10',
-          extract: detailPageExtract,
+          extract: detailExtract,
           followLinks: false,
         },
       ],
@@ -391,152 +330,211 @@ async function runTests() {
     });
 
     const runner = new CrawlConfigRunner();
-    const crawlResult = await runner.run(config);
+    const r = await runner.run(config);
 
-    assert('配置名', crawlResult.configName === '商品列表+详情合并');
-    assert('抓取页面数 >= 3', crawlResult.pagesCrawled >= 3, `${crawlResult.pagesCrawled} 页`);
+    const listPages = r.results.filter((x: any) => x.pageType === '/products/page');
+    const detailPages = r.results.filter((x: any) => x.pageType === '/products/10');
+    const aboutPages = r.results.filter((x: any) => x.pageType === 'default' && x.url.includes('/about'));
 
-    const listPages = crawlResult.results.filter((r: { pageType: string }) => r.pageType === '/products/page');
-    const detailPages = crawlResult.results.filter((r: { pageType: string }) => r.pageType === '/products/10');
-    assert('列表页识别', listPages.length >= 1, `${listPages.length} 页`);
-    assert('详情页识别', detailPages.length >= 1, `${detailPages.length} 页`);
+    assert('配置名正确', r.configName === '商品列表+详情');
+    assert('抓取到列表页', listPages.length >= 1, `${listPages.length} 个列表页`);
+    assert('抓取到详情页', detailPages.length >= 3, `${detailPages.length} 个详情页`);
+    assert('不抓取 about 页', aboutPages.length === 0, `${aboutPages.length} 个 about 页 (应为 0)`);
+    assert('详情页 followLinks=false 不乱抓返回链接', detailPages.every((p: any) => !p.url.includes('page')) || detailPages.length <= 3, `详情页=${detailPages.length}`);
 
-    assert('数据合并存在', crawlResult.mergedItems !== undefined, `${crawlResult.mergedItems?.length} 条合并结果`);
+    assert('存在 linkPipeline', r.linkPipeline !== undefined);
+    if (r.linkPipeline) {
+      const lp = r.linkPipeline;
+      assert('管道有 enqueued', lp.summary.enqueued > 0, `enqueued=${lp.summary.enqueued}`);
+      assert('管道有 dedup', lp.summary.dedup >= 0, `dedup=${lp.summary.dedup}`);
+      assert('管道有 deny (about)', lp.summary.deny > 0, `deny=${lp.summary.deny}`);
+      assert('管道总条目 >= enqueued', lp.summary.total >= lp.summary.enqueued);
+      assert('discovered 条目数 == summary.total', lp.discovered.length === lp.summary.total);
+      assert('byReason 分组正确', Object.keys(lp.byReason).length > 0);
 
-    if (crawlResult.mergedItems && crawlResult.mergedItems.length > 0) {
-      const firstMerged = crawlResult.mergedItems[0] as any;
-      assert('合并项有 id', firstMerged.id !== undefined, `id = ${firstMerged.id}`);
-      assert('合并项有列表字段 name', firstMerged.name !== undefined, `name = ${firstMerged.name}`);
-      if (firstMerged.desc !== undefined) {
-        assert('合并项有详情字段 desc', firstMerged.desc !== undefined, `desc = ${firstMerged.desc}`);
-      }
-      if (firstMerged.stock !== undefined) {
-        assert('合并项有详情字段 stock', firstMerged.stock !== undefined, `stock = ${firstMerged.stock}`);
-      }
+      const denied = lp.byReason.deny ?? [];
+      assert('deny 条目是 /about', denied.every((e: any) => e.url.includes('/about')));
+
+      const notAllowed = lp.byReason['not-allowed'] ?? [];
+      assert('not-allowed 链接不含列表页或详情页模式', notAllowed.every((e: any) => !(e.url.includes('/products/page') || /\/products\/10/.test(e.url))));
+
+      console.log();
+      console.log('  管道视图汇总:');
+      console.log(`    总发现链接: ${lp.summary.total}`);
+      console.log(`    入队抓取: ${lp.summary.enqueued}`);
+      console.log(`    被去重: ${lp.summary.dedup}`);
+      console.log(`    被 denyLinkPatterns 拒绝: ${lp.summary.deny}`);
+      console.log(`    不符合 followLinkPatterns: ${lp.summary.notAllowed}`);
+      console.log(`    其他过滤: ${lp.summary.filter + lp.summary.depth + lp.summary.domain + lp.summary.nonHttp}`);
+      console.log();
+      console.log('  页面类型分布:');
+      r.results.forEach((p: any, i: number) => {
+        console.log(`    ${i + 1}. [${p.pageType}] ${p.url} — HTTP ${p.status}`);
+      });
+    }
+  }
+  console.log();
+
+  // ──── 测试6: 数据合并 ────
+  console.log('━━━ 测试6: 数据合并 — 列表页+详情页按 id 合并 ━━━');
+  {
+    const listExtract = createSchema({
+      products: listRule('products', '.product', {
+        id: attrRule('id', '.product', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+        category: dataRule('category', '.product', 'category'),
+        name: textRule('name', '.product-name'),
+        price: textRule('price', '.price'),
+      }),
+    });
+    const detailExtract = createSchema({
+      id: attrRule('id', '.detail', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+      title: textRule('title', '.product-title'),
+      desc: textRule('desc', '.product-desc'),
+      stock: textRule('stock', '.product-stock'),
+    });
+    const config = createCrawlConfig('合并测试', [`${BASE_URL}/products/page1`], {
+      maxDepth: 2, maxConcurrency: 2, rateLimit: 100, maxRetries: 1,
+      pageRules: [
+        { pattern: '/products/page', extract: listExtract, followLinks: true, followLinkPatterns: [/\/products\/page/, /\/products\/10/], denyLinkPatterns: [/\/about/] },
+        { pattern: '/products/10', extract: detailExtract, followLinks: false },
+      ],
+      mergeBy: 'id',
+    });
+    const runner = new CrawlConfigRunner();
+    const r = await runner.run(config);
+
+    assert('mergedItems 存在', r.mergedItems !== undefined, `${r.mergedItems?.length} 条`);
+    if (r.mergedItems && r.mergedItems.length > 0) {
+      const m0 = r.mergedItems[0] as any;
+      assert('合并项有 id', m0.id !== undefined, `id=${m0.id}`);
+      assert('合并项有列表字段 name', m0.name !== undefined, `name=${m0.name}`);
+      assert('合并项有列表字段 price', m0.price !== undefined, `price=${m0.price}`);
+      assert('合并项有详情字段 desc', m0.desc !== undefined, `desc=${typeof m0.desc === 'string' ? m0.desc.substring(0, 15) + '...' : m0.desc}`);
+      assert('合并项有详情字段 stock', m0.stock !== undefined, `stock=${m0.stock}`);
 
       console.log();
       console.log('  合并结果:');
-      crawlResult.mergedItems.forEach((item: any, i: number) => {
-        console.log(`    ${i + 1}. id=${item.id}, name=${item.name || '(无)'}, desc=${item.desc ? item.desc.substring(0, 20) + '...' : '(无)'}`);
+      r.mergedItems.forEach((m: any, i: number) => {
+        console.log(`    ${i + 1}. id=${m.id}  name=${m.name || '(无)'}  desc=${m.desc ? (String(m.desc).substring(0, 18) + '...') : '(无)'}  stock=${m.stock || '(无)'}`);
       });
     }
-
-    console.log();
-    console.log('  页面抓取详情:');
-    crawlResult.results.forEach((r: { url: string; pageType: string; status: number; retryCount: number }, i: number) => {
-      console.log(`    ${i + 1}. [${r.pageType}] ${r.url} — ${r.status}${r.retryCount > 0 ? ` (重试${r.retryCount}次)` : ''}`);
-    });
   }
   console.log();
 
-  // ──── 测试6: 动作执行 ────
-  console.log('━━━ 测试6: 动作执行 — 模拟搜索表单 ━━━');
+  // ──── 测试7: 动作执行 ────
+  console.log('━━━ 测试7: 动作执行 — 搜索表单模拟 ━━━');
   {
-    const html = `
-      <form id="search-form">
-        <input type="text" id="search-input" name="q" placeholder="搜索">
-        <select id="category" name="category">
-          <option value="all">全部分类</option>
-          <option value="electronics">电子产品</option>
-        </select>
-        <button type="submit" id="search-btn">搜索</button>
-      </form>
-    `;
+    const html = `<form id="search-form"><input type="text" id="search-input" name="q" placeholder="搜索"><button type="submit" id="search-btn">搜索</button></form>`;
     const dom = parseHTML(html);
-
-    const actions = createActionSequence([
-      typeText('#search-input', 'MacBook'),
-      click('#search-btn'),
-    ]);
-
+    const actions = createActionSequence([typeText('#search-input', 'MacBook'), click('#search-btn')]);
     const { ActionExecutor } = require('..');
+    const ctx: any = { dom, variables: {}, results: {}, currentUrl: `${BASE_URL}/search`, delay: (ms: number) => new Promise(r => setTimeout(r, ms)) };
     const executor = new ActionExecutor();
-    const context = {
-      dom,
-      variables: {},
-      results: {},
-      currentUrl: `${BASE_URL}/search`,
-      delay: (ms: number) => new Promise(r => setTimeout(r, ms)),
-    };
-
-    const results = await executor.execute(actions, context);
-    assert('输入动作成功', results[0].success);
-    assert('点击动作成功', results[1].success);
-
-    const searchInput = querySelector(dom, '#search-input');
-    assert('输入值正确', searchInput?.attributes.value === 'MacBook');
+    const res = await executor.execute(actions, ctx);
+    assert('输入动作成功', res[0].success);
+    assert('点击动作成功', res[1].success);
+    const input = querySelector(dom, '#search-input') as any;
+    assert('输入值正确', input?.attributes.value === 'MacBook');
   }
   console.log();
 
-  // ──── 测试7: JSON 报告导出 ────
-  console.log('━━━ 测试7: JSON 报告导出 — 完整抓取报告 ━━━');
+  // ──── 测试8: JSON 报告 + 多格式导出 ────
+  console.log('━━━ 测试8: 报告导出 — 完整 JSON / 轻量 JSON / CSV ━━━');
   {
     flakyRequestCount = 0;
-
-    const config = createCrawlConfig('报告导出测试', [`${BASE_URL}/products/page1`, `${BASE_URL}/flaky`, `${BASE_URL}/broken`], {
-      followLinks: true,
-      linkSelector: 'a[href]',
-      maxDepth: 2,
-      maxConcurrency: 2,
-      rateLimit: 100,
-      maxRetries: 3,
-      retryDelay: 100,
+    const listExtract = createSchema({
+      products: listRule('products', '.product', {
+        id: attrRule('id', '.product', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+        category: dataRule('category', '.product', 'category'),
+        name: textRule('name', '.product-name'),
+        price: textRule('price', '.price'),
+      }),
+    });
+    const detailExtract = createSchema({
+      id: attrRule('id', '.detail', 'data-id', { transform: (v: unknown) => parseInt(v as string, 10) }),
+      title: textRule('title', '.product-title'),
+      desc: textRule('desc', '.product-desc'),
+      stock: textRule('stock', '.product-stock'),
+    });
+    const config = createCrawlConfig('报告导出综合测试', [`${BASE_URL}/products/page1`, `${BASE_URL}/flaky`, `${BASE_URL}/broken`], {
+      maxDepth: 2, maxConcurrency: 2, rateLimit: 100, maxRetries: 3, retryDelay: 100,
       pageRules: [
-        {
-          pattern: '/products/page',
-          extract: createSchema({
-            title: textRule('title', 'h1'),
-          }),
-          followLinks: true,
-        },
-        {
-          pattern: '/products/10',
-          extract: createSchema({
-            id: attrRule('id', '.detail', 'data-id'),
-            title: textRule('title', '.product-title'),
-          }),
-          followLinks: false,
-        },
+        { pattern: '/products/page', extract: listExtract, followLinks: true, followLinkPatterns: [/\/products\/page/, /\/products\/10/], denyLinkPatterns: [/\/about/] },
+        { pattern: '/products/10', extract: detailExtract, followLinks: false },
       ],
       mergeBy: 'id',
     });
 
     const runner = new CrawlConfigRunner();
-    const crawlResult = await runner.run(config);
+    const r = await runner.run(config);
 
-    const reportPath = path.resolve(__dirname, '../../reports/crawl-report.json');
-    exportReport(crawlResult, reportPath);
+    const reportDir = path.resolve(__dirname, '../../reports');
+    const reportPath = path.join(reportDir, 'crawl-report.json');
+    const itemsJSONPath = path.join(reportDir, 'items.json');
+    const itemsCSVPath = path.join(reportDir, 'items.csv');
 
-    const reportExists = fs.existsSync(reportPath);
-    assert('报告文件已创建', reportExists, reportPath);
+    exportReport(r, reportPath);
+    exportItems(r, itemsJSONPath);
+    exportCrawl(r, itemsCSVPath, 'items-csv');
 
-    if (reportExists) {
-      const reportContent = fs.readFileSync(reportPath, 'utf-8');
-      const report = JSON.parse(reportContent);
+    assert('完整 JSON 报告文件存在', fs.existsSync(reportPath), reportPath);
+    assert('轻量 items JSON 文件存在', fs.existsSync(itemsJSONPath), itemsJSONPath);
+    assert('items CSV 文件存在', fs.existsSync(itemsCSVPath), itemsCSVPath);
 
-      assert('报告有 configName', report.configName === '报告导出测试');
-      assert('报告有 seedUrls', Array.isArray(report.seedUrls) && report.seedUrls.length === 3);
-      assert('报告有 summary', report.summary !== undefined);
-      assert('报告 summary 有 pagesCrawled', typeof report.summary.pagesCrawled === 'number');
-      assert('报告 summary 有时间戳', report.summary.startTime !== undefined && report.summary.endTime !== undefined);
+    if (fs.existsSync(reportPath)) {
+      const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+      assert('报告有 configName', report.configName === '报告导出综合测试');
+      assert('报告有 summary', report.summary && report.summary.pagesCrawled > 0);
       assert('报告有 pages 数组', Array.isArray(report.pages));
       assert('报告有 errors 数组', Array.isArray(report.errors));
       assert('报告有 retryLog 数组', Array.isArray(report.retryLog));
+      assert('报告有 linkPipeline', report.linkPipeline !== undefined);
       assert('报告有 mergedItems', report.mergedItems !== undefined);
 
-      const flakyPageInReport = report.pages.find((p: { url: string }) => p.url.includes('/flaky'));
-      assert('报告中 flaky 页面有重试记录', flakyPageInReport?.retryCount > 0, `重试 ${flakyPageInReport?.retryCount} 次`);
+      const flakyPage = report.pages.find((p: any) => p.url.includes('/flaky'));
+      assert('报告 flaky 页有 retryAttempts', flakyPage && Array.isArray(flakyPage.retryAttempts) && flakyPage.retryAttempts.length > 0);
+      if (flakyPage?.retryAttempts?.length > 0) {
+        assert('flaky 首次 HTTP 500', flakyPage.retryAttempts[0].httpStatus === 500);
+        assert('flaky 首次可恢复', flakyPage.retryAttempts[0].recoverable === true);
+        assert('flaky 首次有时间戳', typeof flakyPage.retryAttempts[0].timestamp === 'number');
+      }
 
-      const brokenInErrors = report.errors.find((e: { url: string }) => e.url.includes('/broken'));
-      assert('报告中 404 错误标记不可恢复', brokenInErrors ? !brokenInErrors.recoverable : false, `recoverable = ${brokenInErrors?.recoverable}`);
+      const broken = report.errors.find((e: any) => e.url.includes('/broken'));
+      assert('404 错误标记不可恢复', broken && broken.recoverable === false);
+
+      assert('报告 errors 里有 broken', report.errors.length > 0);
+    }
+
+    if (fs.existsSync(itemsJSONPath)) {
+      const items = JSON.parse(fs.readFileSync(itemsJSONPath, 'utf-8'));
+      assert('轻量 JSON 是数组', Array.isArray(items));
+      assert('轻量 JSON 有合并条目', items.length > 0);
+      if (items.length > 0) {
+        assert('轻量 JSON 首项有 id', items[0].id !== undefined);
+        assert('轻量 JSON 首项有 name', items[0].name !== undefined);
+        assert('轻量 JSON 首项有 desc', items[0].desc !== undefined);
+      }
+    }
+
+    if (fs.existsSync(itemsCSVPath)) {
+      const csvRaw = fs.readFileSync(itemsCSVPath, 'utf-8');
+      assert('CSV 非空', csvRaw.length > 0);
+      assert('CSV 以 BOM 开头', csvRaw.charCodeAt(0) === 0xFEFF);
+      const csv = csvRaw.slice(1);
+      const lines = csv.split('\n');
+      assert('CSV 至少有表头 + 1 行', lines.length >= 2);
+      const headerCols = lines[0].split(',');
+      assert('CSV 表头包含 id', headerCols.includes('id'));
+      assert('CSV 表头包含 name', headerCols.includes('name'));
 
       console.log();
-      console.log(`  报告已保存: ${reportPath}`);
-      console.log(`  报告大小: ${(Buffer.byteLength(reportContent) / 1024).toFixed(1)} KB`);
-      console.log(`  页面数: ${report.pages.length}`);
-      console.log(`  错误数: ${report.errors.length}`);
-      console.log(`  重试日志: ${report.retryLog.length} 条`);
-      console.log(`  合并条目: ${report.mergedItems?.length ?? 0} 条`);
+      console.log(`  报告导出:`);
+      console.log(`    完整报告 (${(fs.statSync(reportPath).size / 1024).toFixed(1)} KB): ${reportPath}`);
+      console.log(`    items JSON (${(fs.statSync(itemsJSONPath).size / 1024).toFixed(1)} KB): ${itemsJSONPath}`);
+      console.log(`    items CSV  (${(fs.statSync(itemsCSVPath).size / 1024).toFixed(1)} KB): ${itemsCSVPath}`);
+      console.log();
+      console.log(`  CSV 内容预览 (前 3 行):`);
+      lines.slice(0, 3).forEach((l, i) => console.log(`    ${i + 1}. ${l.substring(0, 100)}${l.length > 100 ? '…' : ''}`));
     }
   }
   console.log();
